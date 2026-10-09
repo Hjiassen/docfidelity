@@ -12,6 +12,17 @@ docker compose -f deploy/compose.yml up --build
 
 打开 <http://127.0.0.1:8000>。API 托管前端，worker 使用同一镜像；入口先迁移数据库，worker 等 API 健康后启动。镜像以 UID/GID `10001` 运行，首启从自制资产装载两份模板。
 
+脚本中需要后台启动并等待就绪时，分别启动两个服务：
+
+```bash
+docker compose -f deploy/compose.yml build
+docker compose -f deploy/compose.yml up --detach --no-build --wait --wait-timeout 120 df-api
+docker compose -f deploy/compose.yml up --detach --no-build --no-deps df-worker
+python scripts/smoke_deployment.py --url http://127.0.0.1:8000
+```
+
+仅 API 有 HTTP 健康探针；部分 Compose 版本对整栈 `--wait` 会因 worker 无探针而失败。上面的检查会创建项目并实际构建、下载三份文档，用于验证独立 worker 的作业消费能力，应在临时部署中运行。
+
 数据存于 Compose 命名卷 `df-data`（通常实际名称为 `docfidelity_df-data`），包括 SQLite、工作区、上传件、模板、档案与产物。命名卷初始化时继承镜像 `/data` 权限，避免 Linux 自动创建的 bind 目录归 root 而无法写入。
 
 已有 `deploy/data/` 的部署升级前须备份；它不会自动迁移到新命名卷。需要继续使用 bind mount 时自行覆盖 volumes，并在宿主机保证目录可被 UID/GID `10001` 访问。
@@ -26,7 +37,7 @@ SQLite 在线备份应使用一致性备份工具；整卷备份应先停 API �
 
 ## 从源码运行
 
-Python 3.10–3.12、Node.js 22。在仓库根构建前端后运行真实阶段提供者：
+Python 3.11–3.12、Node.js ≥ 22.12。在仓库根构建前端后运行真实阶段提供者：
 
 ```bash
 python -m pip install -e ".[server]"

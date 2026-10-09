@@ -27,7 +27,7 @@ RUN npm run build
 # ============================================================== 阶段 2：运行时
 FROM python:3.12-slim AS runtime
 
-# Python 基线是 >=3.10,<3.13（pyproject.toml）。取 3.12：上限内最新，也是 CI 跑的那个。
+# Python 基线是 >=3.11,<3.13（pyproject.toml）。取 3.12：上限内最新，也是 CI 跑的那个。
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \

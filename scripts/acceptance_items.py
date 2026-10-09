@@ -246,7 +246,7 @@ ITEMS: Final[tuple[Item, ...]] = (
     Item(
         20,
         "开源可跑通",
-        "clone 后用自制示例模板在无私有数据下跑通",
+        "Python 3.11 / 3.12 上 clone 后用自制示例模板在无私有数据下跑通",
         "LICENSE/README/CONTRIBUTING/… 与入口点",
         "auto",
         "open-source-prereqs",

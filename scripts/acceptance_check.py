@@ -314,17 +314,11 @@ def check_env_not_committed() -> Outcome:
 
 def check_open_source_prereqs() -> Outcome:
     """验收 20/31：`git clone` 之后能跑起来所需的文件一件不少，且阶段提供者的入口点已声明。"""
+    import tomllib
+
     missing = [name for name in REQUIRED_FILES if not (REPO_ROOT / name).is_file()]
     if missing:
         return Outcome(FAIL, f"缺 {len(missing)} 件：{missing}")
-
-    try:
-        import tomllib
-    except ModuleNotFoundError:  # py3.10：降级为文本检查，不假装读过 TOML
-        text = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
-        if "docfidelity.build_stages" not in text:
-            return Outcome(FAIL, "pyproject.toml 未声明 docfidelity.build_stages 入口点")
-        return Outcome(PASS, f"{len(REQUIRED_FILES)} 件齐备；入口点已声明（py3.10 走文本检查）")
 
     data = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     stages = data.get("project", {}).get("entry-points", {}).get("docfidelity.build_stages", {})
@@ -337,14 +331,11 @@ def check_open_source_prereqs() -> Outcome:
 
 def check_license_compat() -> Outcome:
     """验收 23：`LICENSE` 是宽松许可，且**直接依赖**里没有传染性许可。"""
+    import tomllib
+
     license_text = (REPO_ROOT / "LICENSE").read_text(encoding="utf-8")
     if "Apache License" not in license_text:
         return Outcome(FAIL, "LICENSE 不是 Apache-2.0（验收 23 要求与直接依赖兼容）")
-
-    try:
-        import tomllib
-    except ModuleNotFoundError:
-        import tomli as tomllib
 
     data = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     names = [

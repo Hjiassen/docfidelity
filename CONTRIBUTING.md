@@ -4,7 +4,7 @@
 
 ## 环境
 
-支持 Python 3.10–3.12，前端与容器构建使用 Node.js 22。
+最低 Python 3.11，当前支持 3.11–3.12；前端与容器构建使用 Node.js 22。
 
 ```bash
 python -m venv .venv

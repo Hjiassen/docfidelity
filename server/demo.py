@@ -89,11 +89,13 @@ def _load_assets(services: Services) -> _DemoAssets:
     """在创建项目与登记库资产前，读取并校验完整的发行资产。"""
     try:
         project = ProjectConfig.model_validate(_read_json(EXAMPLES_ROOT / "project.json"))
-        domains = TypeAdapter(list[DomainModel]).validate_python(
+        domains: list[DomainModel] = TypeAdapter(list[DomainModel]).validate_python(
             _read_json(EXAMPLES_ROOT / "domains.json")
         )
         bundle = _read_json(EXAMPLES_ROOT / "sources.json")
-        configs = TypeAdapter(list[SourceConfig]).validate_python(bundle["sources"])
+        configs: list[SourceConfig] = TypeAdapter(list[SourceConfig]).validate_python(
+            bundle["sources"]
+        )
         data_root = safe_join(EXAMPLES_ROOT, bundle["source_root"])
         sources: list[_SourceAsset] = []
         for config in configs:
