@@ -1,39 +1,55 @@
 <div align="center">
 
+<img src="docs/assets/banner.png" alt="docfidelity：模板驱动的 DOCX 文档引擎与真实生成文档" width="100%" />
+
 # docfidelity
 
-模板与体例驱动的通用 DOCX 文档引擎。
+**将同一批事实数据按既有 Word 模板生成多份 DOCX，并附来源追溯与质量报告。**
 
-可追溯事实源 · 声明式文档档案 · 模板保真 · 质量门禁
+[![CI](https://github.com/Hjiassen/docfidelity/actions/workflows/ci.yml/badge.svg)](https://github.com/Hjiassen/docfidelity/actions/workflows/ci.yml) [![Version](https://img.shields.io/badge/Version-0.0.1%20Alpha-orange.svg)](CHANGELOG.md) [![Python](https://img.shields.io/badge/Python-3.11--3.12-3776AB.svg?logo=python&logoColor=white)](pyproject.toml) [![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED.svg?logo=docker&logoColor=white)](deploy/compose.yml) [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
-[![CI](https://github.com/Hjiassen/docfidelity/actions/workflows/ci.yml/badge.svg)](https://github.com/Hjiassen/docfidelity/actions/workflows/ci.yml)
-[![Status](https://img.shields.io/badge/Status-0.0.1%20Alpha-orange.svg)](CHANGELOG.md)
-[![Python](https://img.shields.io/badge/Python-3.11--3.12-3776AB.svg?logo=python&logoColor=white)](pyproject.toml)
-[![OpenAI Agents SDK](https://img.shields.io/badge/OpenAI-Agents%20SDK-111111.svg)](https://github.com/openai/openai-agents-python)
-[![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED.svg?logo=docker&logoColor=white)](deploy/compose.yml)
-[![FastAPI](https://img.shields.io/badge/FastAPI-API-009688.svg?logo=fastapi&logoColor=white)](server)
-[![React](https://img.shields.io/badge/React-18-61DAFB.svg?logo=react&logoColor=111111)](web/package.json)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6.svg?logo=typescript&logoColor=white)](web/package.json)
-[![Ruff](https://img.shields.io/badge/Ruff-lint-D7FF64.svg?logo=ruff&logoColor=111111)](pyproject.toml)
-[![pytest](https://img.shields.io/badge/pytest-tests-0A9EDC.svg?logo=pytest&logoColor=white)](tests)
+[简体中文](README.md) | [English](README.en.md)
 
-[快速开始](#快速开始) | [使用指南](docs/guide/README.md) | [部署指南](deploy/README.md) | [路线图](ROADMAP.md)
+[快速开始](#快速开始) | [产物预览](#产物预览) | [使用指南](docs/guide/README.md) | [部署指南](deploy/README.md)
 
 </div>
 
+## 快速开始
+
+需要 Git、Docker 与 Docker Compose，三行启动浏览器工作台：
+
+```bash
+git clone https://github.com/Hjiassen/docfidelity.git
+cd docfidelity
+docker compose -f deploy/compose.yml up --build
+```
+
+打开 <http://127.0.0.1:8000>，点击“一键创建演示项目”，提交构建后查看报告并下载三份 DOCX。**无需 API Key、真实模板或 Office。** 首次拉取镜像和依赖需要网络。
+
+API 托管前端，独立 worker 消费作业，数据保存在命名卷中。后台启动与持久化见[部署指南](deploy/README.md)；Python 示例与源码工作台见[源码运行](#源码运行)。
+
+当前为 **0.0.1 Alpha**，完整能力边界与待完成项见[使用边界](#使用边界)和[路线图](ROADMAP.md)。
+
+## 产物预览
+
+![同一批自制事实源生成的三种真实 DOCX 文档布局](docs/assets/outputs.png)
+
+从左到右为逐节设计、汇总设计、作业程序，均来自发行自制示例的真实构建产物。展示的是 2026-10-08 经 Word 渲染的第 5 页；实际页数取决于排版环境，规则构建本身无需 Office。
+
+查看高清单页：[逐节设计](docs/assets/output-sectioned.png) · [汇总设计](docs/assets/output-summary.png) · [作业程序](docs/assets/output-procedure.png)。输入与复现步骤见[示例说明](examples/README.md)。
+
 ## 项目简介
 
-`docfidelity` 将事实接入、内容编排与 DOCX 渲染分开：从外部来源提取事实，按文档类型档案生成内容 IR，再将内容注入已入库的模板，输出文档、来源追溯和质量报告。文档类型与领域模型由配置声明，内核不绑定具体业务类型。
+`docfidelity` 将事实接入、内容编排与 DOCX 渲染分开：从外部来源提取事实，按文档类型档案生成内容 IR，再将内容注入已入库的模板。文档类型与领域模型由配置声明，内核不绑定具体业务类型。
 
-当前版本 **0.0.1，Alpha**。内核、HTTP API 与浏览器工作台已实现；Docker、浏览器闭环、当前配置模型和 Word 分页已有本机实测。默认构建尚未接入模型决策，当前配置模型在默认置信度门槛下基线为 `0/10`。已知缺口和证据边界见[验收说明](docs/验收/P0-验收自检.md)，剩余工作见[路线图](ROADMAP.md)。
+内核、HTTP API 与浏览器工作台已实现，技术栈为 Python、Pydantic、OOXML / python-docx、FastAPI、React 与 TypeScript；模型适配使用可选的 OpenAI Agents SDK。Docker、浏览器闭环、当前配置模型和 Word 分页的证据见[验收说明](docs/验收/P0-验收自检.md)。
 
 ## 目录
 
 - [适合场景](#适合场景)
 - [特性](#特性)
 - [架构](#架构)
-- [快速开始](#快速开始)
+- [源码运行](#源码运行)
 - [配置](#配置)
 - [项目结构](#项目结构)
 - [开发](#开发)
@@ -77,21 +93,7 @@
 
 `contracts` 为依赖之根；`compose` 不操作 OOXML；模板解析发生在入库期，生成期只读契约。Agent 通过工具做决策，确定性阶段负责文档操作。基础安装不含 Web、数据库或模型 SDK 依赖，架构约束见 [AGENTS.md](AGENTS.md)。
 
-## 快速开始
-
-### Docker 工作台
-
-需要 Git、Docker 与 Docker Compose。在终端执行：
-
-```bash
-git clone https://github.com/Hjiassen/docfidelity.git
-cd docfidelity
-docker compose -f deploy/compose.yml up --build
-```
-
-打开 <http://127.0.0.1:8000>，通过“一键创建演示项目”装载自制模板、领域模型、三份档案与事实来源，提交构建后查看报告并下载 DOCX。无需 API Key、真实模板或 Office。首次拉取镜像和依赖需要网络。
-
-API 托管前端，独立 worker 消费作业，运行数据保存在命名卷中。后台启动、健康检查与持久化说明见[部署指南](deploy/README.md)。
+## 源码运行
 
 ### Python 示例构建
 
@@ -207,7 +209,7 @@ Compose 使用同一镜像运行 API 和独立 worker，数据存于命名卷 `d
 
 模板保真以归一化样式结构和模板包契约为依据，不承诺整个 DOCX 的原始字节不变。真实页码依赖 Word、字体和打印环境；结构快照不能代替分页实测。
 
-默认构建的模型决策集成仍待补齐，辅助模型实验不代表默认能力。生成文档须审核质量报告与待确认项；开发夹具服务器 `scripts/serve_dev.py` 的固定报告不能用于功能验收。
+默认构建尚未接入模型决策，当前配置模型在默认置信度门槛下基线为 `0/10`，辅助模型实验不代表默认能力。完整缺口见[验收说明](docs/验收/P0-验收自检.md)。生成文档须审核质量报告与待确认项；开发夹具服务器 `scripts/serve_dev.py` 的固定报告不能用于功能验收。
 
 Word COM 与 PDF 目检属于可选能力。PyMuPDF 采用 AGPL 或商业许可，安装 `office` extra 前应核对使用方式，许可证边界见 [NOTICE](NOTICE)。`.env`、真实模板、事实源和运行数据不应提交到仓库。
 

@@ -94,7 +94,7 @@ include = [
     "/deploy", "/web/src", "/web/index.html", "/web/package.json", "/web/package-lock.json",
     "/web/tsconfig.json", "/web/vite.config.ts", "/web/openapi.json", "/.github",
     "/.env.example", "/.gitattributes", "/.gitignore", "/.importlinter",
-    "/.pre-commit-config.yaml", "/.dockerignore", "/AGENTS.md", "/alembic.ini", "/README.md",
+    "/.pre-commit-config.yaml", "/.dockerignore", "/AGENTS.md", "/alembic.ini", "/README.md", "/README.en.md",
     "/LICENSE", "/NOTICE", "/CHANGELOG.md", "/CONTRIBUTING.md", "/GOVERNANCE.md",
     "/ROADMAP.md", "/SECURITY.md", "/CODE_OF_CONDUCT.md", "/CODEOWNERS",
 ]
