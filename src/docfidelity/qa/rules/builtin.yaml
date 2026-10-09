@@ -1,0 +1,158 @@
+# 内置门禁规则集（DD-10.1 / DD-10.2 / 附录 C）
+#
+# 本文件是**声明**，断言实现在 qa/rules/checks_*.py 里，按 `check` 字段的闭集名 dispatch。
+# 规则执行失败不会中断门禁：一条规则抛错时记一条 minor，其余规则照常跑完（DD-10.3）。
+#
+# 为什么规则用 YAML 而不是 Python（需求 8 / 2279 行）：
+#   「贡献门禁规则 = 编写 YAML 规则，不需要写代码」。把判据写成代码就把它变成了
+#   引擎的一部分，于是每加一条规则都要过一遍引擎的依赖与分层纪律。
+#
+# FR-M5-14 / 15 / 16 为什么不在这里
+#   「严重级别与豁免」「构建报告」「门禁阻断」三条**由引擎本体实现**，不是断言：
+#   级别取值域与豁免生效见 qa.engine.apply_waivers，报告汇总见 qa.engine.summarize，
+#   阻断出口见 qa.engine.can_finalize（= verdict != "blocked"）。把它们写成
+#   `check: noop` 的占位规则会让"这三条已经落地"这句话在代码里无法验证。
+#
+# requires 的含义
+#   该规则**需要具备的能力**；上下文缺该项时规则被跳过，且跳过会写进报告摘要
+#   （"没检查"必须与"检查通过"可区分）。例如没有术语表就跳 FR-M5-08，
+#   没有基线就跳 FR-M5-11 / 13。
+
+format_version: "1"
+rule_set: base_style
+title: 基础体例门禁（样式 / 版式 / 术语 / 完整性 / 追溯）
+
+rules:
+  - id: FR-M5-01
+    category: style
+    severity: blocker
+    title: 样式合规
+    description: 直设格式残留、引用的 styleId 是否都存在、样式定义是否偏离模板契约
+    check: style_compliance
+    scope: ["*"]
+    requires: ["ooxml.styles", "contract"]
+
+  - id: FR-M5-02
+    category: style
+    severity: blocker
+    title: 模板保真
+    description: 产物段落文字须来自内容 IR（模板示例内容不得残留）；段落数与预期一致
+    check: template_fidelity
+    scope: ["*"]
+    requires: ["render_view", "ir"]
+
+  - id: FR-M5-03
+    category: style
+    severity: major
+    title: 表头规范
+    description: 表头加粗缺失数 = 0、数据行误加粗数 = 0、底纹残留数 = 0
+    check: header_style
+    scope: ["*"]
+    requires: ["render_view", "contract"]
+
+  - id: FR-M5-04
+    category: layout
+    severity: blocker
+    title: 分页合规
+    description: 正文分页符数 = 0（仅封面 / 修订记录 / 目录三处允许），一级标题处无强制分页
+    check: pagination
+    scope: ["*"]
+    requires: ["render_view", "contract"]
+
+  - id: FR-M5-05
+    category: layout
+    severity: major
+    title: 结构合规
+    description: 标题层级深度 1–3、编号连续无跳号、无空章节、无孤立标题
+    check: structure
+    scope: ["*"]
+    requires: ["ir"]
+    params:
+      allowed_levels: [1, 2, 3]
+
+  - id: FR-M5-06
+    category: layout
+    severity: blocker
+    title: 表格越界
+    description: 表格总宽不超版心宽
+    check: table_overflow
+    scope: ["*"]
+    requires: ["ooxml.geometry", "contract"]
+    params:
+      tolerance_twips: 20
+
+  - id: FR-M5-07
+    category: layout
+    severity: blocker
+    title: 图片越界
+    description: 逐张量 wp:extent cx/cy，全部落在版心内；图注与图不分离
+    check: picture_overflow
+    scope: ["*"]
+    requires: ["ooxml.pictures", "ooxml.geometry", "contract"]
+
+  - id: FR-M5-08
+    category: terminology
+    severity: blocker
+    title: 术语一致
+    description: 禁用词 / 旧称命中数 = 0；变量替换后无连读重复
+    check: terminology
+    scope: ["*"]
+    requires: ["terminology"]
+
+  - id: FR-M5-09
+    category: integrity
+    severity: blocker
+    title: 内容完整性
+    description: 模板槽位未填数、占位符残留数、待确认项统计
+    check: completeness
+    scope: ["*"]
+    requires: ["render_view", "ir"]
+
+  - id: FR-M5-10
+    category: trace
+    severity: major
+    title: 追溯完整
+    description: 每个可追溯对象都有落位；未落位项列出
+    check: traceability
+    scope: ["*"]
+    requires: ["trace"]
+
+  - id: FR-M5-11
+    category: layout
+    severity: major
+    title: 稳定化比对
+    description: 归一化易变标识（目录书签 ID、关系 ID 等）后与基线 diff，避免假差异
+    check: stable_comparison
+    scope: ["*"]
+    requires: ["baseline"]
+
+  - id: FR-M5-12
+    category: spotcheck
+    severity: major
+    title: 渲染目检
+    description: docx → PDF → PNG，按关键词定位页面；渲染服务不可用则降级并标注原因
+    check: spotcheck
+    scope: ["*"]
+    requires: ["spotcheck"]
+
+  - id: FR-M5-13
+    category: integrity
+    severity: minor
+    title: 回归基线
+    description: 与上一版产物比对，输出页数、结构、文本的差异报告
+    check: regression_baseline
+    scope: ["*"]
+    requires: ["baseline"]
+
+  - id: FR-M5-17
+    category: integrity
+    severity: blocker
+    title: 类型无关检索
+    description: 以禁用词表检索引擎源码与内容 IR 输出，命中即失败
+    check: type_agnostic
+    scope: ["*"]
+    requires: ["ir"]
+    params:
+      # 源码一侧默认不扫（CI 每次提交已扫）；IR 一侧永远扫。要给非空列表才会扫源码，
+      # 例如 [src/docfidelity]。详见 qa.rules.checks_content.check_type_agnostic。
+      roots: []

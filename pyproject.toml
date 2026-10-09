@@ -1,0 +1,179 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "docfidelity"
+version = "0.0.1"
+description = "模板与体例驱动的通用文档撰写引擎（样式层零改动，只注入内容）"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+license = { file = "LICENSE" }
+authors = [{ name = "docfidelity contributors" }]
+keywords = ["document-generation", "ooxml", "docx", "template", "fidelity"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Office Suites",
+    "Topic :: Text Processing :: Markup :: XML",
+]
+
+# ---------------------------------------------------------------- 分段依赖
+# OS-13：内核安装不得拉入 Web 依赖。
+# coredeps（本项目的核心运行依赖）随基础安装提供；office / server / dev 走 extras。
+dependencies = [
+    "pydantic>=2.7,<3",
+    "python-docx>=1.1,<2",
+    "lxml>=5,<6",
+    # DD-10.1：门禁规则以 YAML 为声明载体（内置规则集随包分发），故属核心依赖。
+    "PyYAML>=6,<7",
+]
+
+[project.optional-dependencies]
+# 模型 SDK 会传递引入 ASGI 依赖；纯内核安装必须不含这条依赖链。
+model = ["openai-agents>=0.22,<0.24", "mcp>=1.19,<2"]
+# extras: office —— Word COM 域刷新 + PDF 渲染目检
+office = [
+    "pywin32>=306; sys_platform == 'win32'",
+    "PyMuPDF>=1.24,<2",
+]
+# extras: server —— HTTP / 作业持久化 / SSE
+server = [
+    "fastapi>=0.115,<0.116",
+    "uvicorn[standard]>=0.30,<1",
+    "sqlalchemy>=2.0,<3",
+    "alembic>=1.13,<2",
+    "sse-starlette>=2,<3",
+    "pydantic-settings>=2.3,<3",
+    "python-multipart>=0.0.9",
+    "aiofiles>=23.2,<25",
+]
+dev = [
+    "pytest>=8,<9",
+    "pytest-asyncio>=0.23,<1",
+    "pytest-cov>=5,<7",
+    "import-linter>=2,<3",
+    "ruff==0.6.9",
+    "mypy==1.11.2",
+    "pre-commit>=3.7,<5",
+    "types-lxml>=2024.4.6",
+    "httpx>=0.27,<1",
+    "tomli>=2; python_version < '3.11'",
+    "build>=1.2,<2",
+    "twine>=6,<7",
+]
+
+[project.urls]
+Homepage = "https://github.com/Hjiassen/docfidelity"
+Documentation = "https://github.com/Hjiassen/docfidelity/tree/main/docs"
+Changelog = "https://github.com/Hjiassen/docfidelity/blob/main/CHANGELOG.md"
+Issues = "https://github.com/Hjiassen/docfidelity/issues"
+
+[project.scripts]
+# 命令行入口。**不在 `platform` 里**：platform 是内核最底层（只允许标准库 + pydantic），
+# 而"跑一遍构建"必须认识 pipeline——目标定在 platform 等于要求它反向依赖整个内核。
+# `builder` 是内核的组合根，CLI 只是它的另一个消费者（服务端走入口点发现）。
+docfidelity = "docfidelity.builder.cli:main"
+
+[project.entry-points."docfidelity.build_stages"]
+# 随内核分发的**参考**阶段体提供者（DD-13.1）。服务端按这个组发现阶段实现
+# （``server.api.deps.load_stage_registry``），故装上本发行版即可发起构建，
+# ``server`` 一行都不用改。换一套阶段体 = 装另一个提供者、把本项删掉。
+reference = "docfidelity.builder.stages:provide"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/docfidelity"]
+# Twine 6 校验支持至 2.4；显式固定，避免构建后端默认值升级破坏发布。
+core-metadata-version = "2.4"
+
+[tool.hatch.build.targets.sdist]
+core-metadata-version = "2.4"
+include = [
+    "/src", "/server", "/tests", "/scripts", "/docs", "/examples", "/demo-templates",
+    "/deploy", "/web/src", "/web/index.html", "/web/package.json", "/web/package-lock.json",
+    "/web/tsconfig.json", "/web/vite.config.ts", "/web/openapi.json", "/.github",
+    "/.env.example", "/.gitattributes", "/.gitignore", "/.importlinter",
+    "/.pre-commit-config.yaml", "/.dockerignore", "/AGENTS.md", "/alembic.ini", "/README.md",
+    "/LICENSE", "/NOTICE", "/CHANGELOG.md", "/CONTRIBUTING.md", "/GOVERNANCE.md",
+    "/ROADMAP.md", "/SECURITY.md", "/CODE_OF_CONDUCT.md", "/CODEOWNERS",
+]
+
+# ---------------------------------------------------------------- Ruff
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests", "server"]
+# .workbuddy 是协作工具的项目数据目录（记忆 / 临时脚本），不属于代码库
+extend-exclude = [".workbuddy", ".venv", "build", "dist", "web"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+ignore = [
+    "E501",    # 行长由 formatter 管控
+    "RUF001",  # 中文全角标点在文案中是预期行为
+    "RUF002",
+    "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B011"]
+"docs/**" = ["E"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["docfidelity", "server"]
+
+# ---------------------------------------------------------------- mypy
+# 覆盖面 = `src/docfidelity` 全部模块 + `server`（`exclude` 只排除 tests）。
+# 起点是 DD-2.4 的"严格模式先作用于 contracts / ooxml / render / qa"，此后每轮新模块
+# 随该轮纳入（`agents` 自 TASK-P0-16 起在内）——故这里只留"当前覆盖到哪"，不再列历史名单。
+[tool.mypy]
+python_version = "3.10"
+warn_unused_configs = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+show_error_codes = true
+# `src` 提供 docfidelity.*，`.` 提供 server.*；两者都是根包（见 .importlinter 的 root_packages）。
+mypy_path = ["src", "."]
+exclude = ["^(tests)/"]
+
+[[tool.mypy.overrides]]
+module = ["docfidelity.contracts.*", "docfidelity.ooxml.*", "docfidelity.render.*", "docfidelity.qa.*"]
+strict = true
+
+[[tool.mypy.overrides]]
+# 无类型标注的第三方库：与本项目既有做法一致（docx / agents 同此）。
+# yaml 是规则文件的解析器（DD-10.1 的声明载体）；win32com / fitz 是 Office 与
+# 渲染目检的可选依赖，只在装了 extras[office] 的机器上存在。
+module = ["docx.*", "agents.*", "yaml.*", "win32com.*", "pythoncom", "fitz.*"]
+ignore_missing_imports = true
+
+# ---------------------------------------------------------------- pytest
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+asyncio_mode = "auto"
+addopts = "-q --strict-markers --strict-config"
+markers = [
+    "unit: 纯内核单测，禁止 HTTP / DB 依赖",
+    "integration: 跨模块集成",
+    "api: 服务端接口",
+    "e2e: 端到端",
+    "golden: 结构快照比对",
+    "replay: 模型录制回放",
+]
+filterwarnings = ["error::DeprecationWarning:docfidelity.*"]
+
+# ---------------------------------------------------------------- coverage
+[tool.coverage.run]
+branch = true
+source = ["src/docfidelity"]
+omit = ["*/migrations/*"]
+
+[tool.coverage.report]
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", "raise NotImplementedError"]

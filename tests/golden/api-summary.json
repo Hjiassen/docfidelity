@@ -1,0 +1,114 @@
+{
+  "doc_key": "api-summary",
+  "paragraph_count": 103,
+  "style_refs": {
+    "Footer": 1,
+    "Heading1": 4,
+    "Heading2": 1,
+    "TOC1": 3,
+    "TOC2": 2,
+    "TableGrid": 7
+  },
+  "tables": [
+    {
+      "rows": 2,
+      "cols": 5,
+      "widths_twips": [
+        1728,
+        1728,
+        1728,
+        1728,
+        1728
+      ]
+    },
+    {
+      "rows": 2,
+      "cols": 4,
+      "widths_twips": [
+        2160,
+        2160,
+        2160,
+        2160
+      ]
+    },
+    {
+      "rows": 4,
+      "cols": 4,
+      "widths_twips": [
+        2160,
+        2160,
+        2160,
+        2160
+      ]
+    },
+    {
+      "rows": 2,
+      "cols": 4,
+      "widths_twips": [
+        2160,
+        2160,
+        2160,
+        2160
+      ]
+    },
+    {
+      "rows": 6,
+      "cols": 3,
+      "widths_twips": [
+        2880,
+        2880,
+        2880
+      ]
+    },
+    {
+      "rows": 5,
+      "cols": 2,
+      "widths_twips": [
+        4320,
+        4320
+      ]
+    },
+    {
+      "rows": 5,
+      "cols": 2,
+      "widths_twips": [
+        4320,
+        4320
+      ]
+    }
+  ],
+  "pictures": [],
+  "page_breaks": [
+    {
+      "index": -1,
+      "kind": "pageBreakBefore",
+      "before": "序号"
+    },
+    {
+      "index": -1,
+      "kind": "pageBreakBefore",
+      "before": "概述1"
+    },
+    {
+      "index": 8,
+      "kind": "pageBreakBefore",
+      "before": "概述"
+    },
+    {
+      "index": 14,
+      "kind": "pageBreakBefore",
+      "before": "接口清单"
+    },
+    {
+      "index": 20,
+      "kind": "pageBreakBefore",
+      "before": "数据表"
+    },
+    {
+      "index": 22,
+      "kind": "pageBreakBefore",
+      "before": "参考资料"
+    }
+  ],
+  "sections": 3
+}

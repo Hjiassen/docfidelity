@@ -1,0 +1,213 @@
+; 分层与禁止依赖契约（DD-2.2 / DD-2.3 / 验收 33）
+; 运行：lint-imports
+; 语义：layers 中「上层可以依赖下层，下层不得反向依赖上层」；同一行以 | 分隔的模块
+;       互为**独立层**，彼此不得互相 import。
+; 内核必须零 Web 依赖：docfidelity.* 不得 import server / fastapi / starlette / sqlalchemy。
+;
+; 分层依据 = DD-2.2 的「允许依赖」列（+ 附录 C 对各门禁规则的依赖声明）：
+;   compose ← contracts / model / ingest        qa ← contracts / ooxml / 契约 / 术语 / 渲染服务
+;   ingest  ← contracts / model / platform      render / registry ← contracts / ooxml / platform
+; DD-2.3(1) 原稿把 compose 与 ingest 排在同一独立层，使 DD-2.2 明确允许的
+; `compose → ingest`（DD-8.1 要经 normalize 把事实摊成领域对象）无法表达；
+; 附录 C 的 FR-M5-08（术语一致，依赖 compose.glossary）与 FR-M5-05/02（依赖契约）
+; 也要求 qa 位于 compose 与 registry 之上。P0-08 落地时按 DD-2.2 修正。
+
+[importlinter]
+root_packages =
+    docfidelity
+    server
+include_external_packages = False
+
+[importlinter:contract:kernel-layers]
+name = 内核分层（决策五：contracts 为依赖之根；分层依 DD-2.2 的允许依赖列）
+type = layers
+layers =
+    docfidelity.builder
+    docfidelity.pipeline
+    docfidelity.agents
+    docfidelity.qa
+    docfidelity.compose | docfidelity.render | docfidelity.registry
+    docfidelity.ingest
+    docfidelity.ooxml | docfidelity.model
+    docfidelity.platform
+    docfidelity.contracts
+
+[importlinter:contract:builder-has-no-server]
+name = 参考构建包是内核的组合根：可依赖内核各层，不得依赖服务端
+type = forbidden
+source_modules =
+    docfidelity.builder
+forbidden_modules =
+    server
+
+[importlinter:contract:compose-has-no-ooxml]
+name = compose 不得触碰 OOXML（决策一：编排与渲染解耦）
+type = forbidden
+source_modules =
+    docfidelity.compose
+forbidden_modules =
+    docfidelity.ooxml
+
+[importlinter:contract:compose-has-no-forbidden-deps]
+name = compose 不得依赖渲染与门禁（装配只产 IR）
+type = forbidden
+source_modules =
+    docfidelity.compose
+forbidden_modules =
+    docfidelity.ooxml
+    docfidelity.render
+    docfidelity.qa
+
+[importlinter:contract:model-has-no-ooxml]
+name = model 不得触碰 OOXML（领域模型与文档概念无关）
+type = forbidden
+source_modules =
+    docfidelity.model
+forbidden_modules =
+    docfidelity.ooxml
+
+[importlinter:contract:agents-has-no-ooxml]
+name = agents 只做决策不做 OOXML（决策三）
+type = forbidden
+source_modules =
+    docfidelity.agents
+forbidden_modules =
+    docfidelity.ooxml
+
+[importlinter:contract:agents-has-no-server]
+name = agents 不得依赖服务端（决策四：内核零 Web 依赖）
+type = forbidden
+source_modules =
+    docfidelity.agents
+forbidden_modules =
+    server
+
+[importlinter:contract:ingest-has-no-forbidden-deps]
+name = ingest 不得依赖 OOXML 与下游（接入只产事实包，不产文档）
+type = forbidden
+source_modules =
+    docfidelity.ingest
+forbidden_modules =
+    docfidelity.ooxml
+    docfidelity.registry
+    docfidelity.render
+    docfidelity.qa
+
+[importlinter:contract:registry-has-no-downstream]
+name = registry 不得依赖下游装配 / 渲染 / 门禁
+type = forbidden
+source_modules =
+    docfidelity.registry
+forbidden_modules =
+    docfidelity.compose
+    docfidelity.render
+    docfidelity.qa
+
+[importlinter:contract:render-has-no-forbidden-deps]
+name = render 只吃契约与 OOXML（DD-2.2 的允许依赖列：contracts / ooxml / platform）
+type = forbidden
+source_modules =
+    docfidelity.render
+forbidden_modules =
+    docfidelity.compose
+    docfidelity.registry
+    docfidelity.qa
+    docfidelity.agents
+    docfidelity.pipeline
+    docfidelity.ingest
+    docfidelity.model
+
+[importlinter:contract:qa-has-no-forbidden-deps]
+name = qa 只读契约与产物（DD-2.2 的允许依赖列：contracts / ooxml / registry / compose / render）
+type = forbidden
+source_modules =
+    docfidelity.qa
+forbidden_modules =
+    docfidelity.model
+    docfidelity.ingest
+    docfidelity.agents
+    docfidelity.pipeline
+
+[importlinter:contract:pipeline-has-no-forbidden-deps]
+name = pipeline 是内核最上层，不得依赖服务端（DD-2.2）
+type = forbidden
+source_modules =
+    docfidelity.pipeline
+forbidden_modules =
+    server
+
+[importlinter:contract:pipeline-agents-seam]
+name = 与决策层的耦合只在接缝模块（其余编排模块不认识 agents）
+type = forbidden
+source_modules =
+    docfidelity.pipeline.artifacts
+    docfidelity.pipeline.checkpoint
+    docfidelity.pipeline.events
+    docfidelity.pipeline.job
+    docfidelity.pipeline.profiles
+    docfidelity.pipeline.sources
+    docfidelity.pipeline.stages
+    docfidelity.pipeline.templates
+forbidden_modules =
+    docfidelity.agents
+allow_indirect_imports = True
+
+[importlinter:contract:pipeline-registry-seam]
+name = 与模板库的耦合只在接缝模块（server 不得碰 registry，只能经 pipeline.templates）
+type = forbidden
+source_modules =
+    docfidelity.pipeline.artifacts
+    docfidelity.pipeline.checkpoint
+    docfidelity.pipeline.decisions
+    docfidelity.pipeline.events
+    docfidelity.pipeline.job
+    docfidelity.pipeline.profiles
+    docfidelity.pipeline.sources
+    docfidelity.pipeline.stages
+forbidden_modules =
+    docfidelity.registry
+allow_indirect_imports = True
+
+[importlinter:contract:pipeline-ingest-seam]
+name = 与接入层的耦合只在接缝模块（其余编排模块不认识 ingest）
+type = forbidden
+source_modules =
+    docfidelity.pipeline.artifacts
+    docfidelity.pipeline.checkpoint
+    docfidelity.pipeline.decisions
+    docfidelity.pipeline.events
+    docfidelity.pipeline.job
+    docfidelity.pipeline.profiles
+    docfidelity.pipeline.stages
+    docfidelity.pipeline.templates
+forbidden_modules =
+    docfidelity.ingest
+allow_indirect_imports = True
+
+[importlinter:contract:server-has-no-ooxml]
+name = server 不得自己伸手进内核实现（决策四的对称约束；DD-2.2 允许依赖 = contracts + pipeline）
+type = forbidden
+source_modules =
+    server
+forbidden_modules =
+    docfidelity.ooxml
+    docfidelity.registry
+    docfidelity.ingest
+    docfidelity.compose
+    docfidelity.render
+    docfidelity.qa
+    docfidelity.model
+    docfidelity.agents
+; 只禁**直接** import —— 与 DD-2.2 的措辞一致（"不得 import ooxml / registry **内部实现**"）。
+;
+; 为什么不能连间接一起禁：DD-2.2 的允许依赖列写着 ``server`` → ``contracts`` + ``pipeline``，
+; 而 ``pipeline`` 的允许依赖是"上述内核模块 + platform"（含 registry / ooxml）。两者合起来
+; 必然产生 ``server → pipeline.xxx → registry → ooxml`` 这样的间接链——把间接也算违规，
+; 就等于"server 不得使用 pipeline 的任何用例函数"，而那正是 DD-13.1 要求它做的事。
+;
+; 于是本契约的**实际管辖范围**是：server 只能经 ``pipeline`` 暴露的用例函数取内核能力，
+; 不得自己伸手进 OOXML / 模板库 / 接入 / 装配 / 渲染 / 门禁 / 决策层。而"这条间接链必须
+; 经过哪个 pipeline 模块"由下面三条 seam 契约管（``pipeline-agents-seam`` /
+; ``pipeline-registry-seam`` / ``pipeline-ingest-seam``）——四者合起来才等价于"服务端能碰
+; 内核的什么"这个问题只有一个答案。
+allow_indirect_imports = True

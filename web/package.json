@@ -1,0 +1,38 @@
+{
+  "name": "docfidelity-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "description": "docfidelity 的 Web 前端（DD-14）。样式与业务判断都在服务端，这里只做呈现与提交。",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --environment jsdom --maxWorkers=2",
+    "gen:api": "openapi-typescript ./openapi.json -o src/api/schema.d.ts"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.59.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.18.4",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.0",
+    "@types/node": "^22.7.5",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^5.0.0",
+    "jsdom": "^27.4.0",
+    "openapi-typescript": "^7.4.2",
+    "typescript": "^5.6.3",
+    "vite": "^7.0.0",
+    "vitest": "^4.1.11"
+  }
+}

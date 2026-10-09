@@ -1,0 +1,33 @@
+# 统一换行符为 LF：避免 Windows 检出时被转成 CRLF，产生跨平台假差异。
+# 与 pre-commit 的 mixed-line-ending --fix=lf 一致。
+* text=auto eol=lf
+
+# 二进制文件不参与文本转换
+*.docx    binary
+*.docm    binary
+*.dotx    binary
+*.xlsx    binary
+*.pptx    binary
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.gif     binary
+*.ico     binary
+*.pdf     binary
+*.zip     binary
+*.gz      binary
+*.woff    binary
+*.woff2   binary
+*.ttf     binary
+
+# 契约 schema 是生成物：合并冲突没有意义，重新生成即可
+docs/spec/**/schema.json  -diff
+docs/spec/**/schema.json  linguist-generated=true
+
+# 语言统计口径
+docs/**/*.md              linguist-documentation=true
+demo-templates/**         linguist-documentation=true
+
+# 示例资产按原样保留（模板包内的 XML 不应被格式化）
+examples/**/blocks/**     -text
+demo-templates/**/blocks/**  -text

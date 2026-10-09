@@ -1,0 +1,35 @@
+docfidelity
+Copyright 2026 docfidelity contributors
+
+This product includes software developed at the docfidelity project
+(https://github.com/Hjiassen/docfidelity).
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+--------------------------------------------------------------------------
+
+Third-party components are distributed under their own licenses. The runtime
+dependency set is declared in pyproject.toml; consult each upstream project
+for its terms. Notably:
+
+  - pydantic            (MIT)
+  - python-docx / lxml  (MIT / BSD-style)
+  - openai-agents       (MIT, `extras: model`)
+  - FastAPI / SQLAlchemy / sse-starlette (MIT, `extras: server`)
+  - PyMuPDF             (AGPL-3.0 or commercial, `extras: office`)
+  - pywin32             (PSF-style, `extras: office`, Windows only)
+
+Note on PyMuPDF: it is an **optional** extra used only for render spot-check
+(docx -> PDF -> PNG). Deployments that cannot accept AGPL-3.0 must either
+obtain a commercial license from Artifex or leave `extras: office` uninstalled
+and provide a compatible external rendering workflow instead.

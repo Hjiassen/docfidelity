@@ -1,0 +1,66 @@
+# docfidelity 的编排（DD-18.1）。
+#
+# 用法（**先 cd 到 deploy/**，这样下面那条命令就是字面意义上的 `docker compose up`）：
+#
+#     cd deploy
+#     docker compose up --build
+#     # 浏览器打开 http://127.0.0.1:8000
+#
+# 只要一个进程（不需要独立的 worker）：
+#
+#     docker compose up df-api          # 只起 api
+#     并把 DOCFIDELITY_START_WORKER 改成 true（让它自己起 worker 线程）
+#
+# 两种拓扑都成立，因为"谁消费作业"是部署选择：api 内嵌 worker 线程（单机演示够用），
+# 或另起 df-worker（可单独重启、单独扩容）。**不要**两边都开——项目锁能保证同项目
+# 串行，但两个消费者抢同一队列会让"worker 到底在哪台机器上"变成一个无法回答的问题。
+
+name: docfidelity
+
+x-runtime: &runtime
+  build:
+    context: ..
+    dockerfile: deploy/Dockerfile
+  image: docfidelity:local
+  # 命名卷继承镜像 /data 的 UID 10001 权限，避免 Linux 自动创建的 bind 目录归 root。
+  volumes:
+    - df-data:/data
+  environment:
+    # 由 df-worker 单独消费；api 进程不再自己起线程。
+    DOCFIDELITY_START_WORKER: "false"
+  restart: unless-stopped
+
+services:
+  df-api:
+    <<: *runtime
+    container_name: df-api
+    # 只暴露一个端口：前端静态资源由本进程同源托管（server.static_site），
+    # 浏览器侧因此不存在跨域，也不需要第二个服务。
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  df-worker:
+    <<: *runtime
+    container_name: df-worker
+    # 同一个镜像、换一条命令。差别只有一行 argv，所以不值得第二个镜像。
+    command: ["python", "-m", "server.worker"]
+    depends_on:
+      df-api:
+        # 为什么等 **healthy** 而不是 `service_started`：两个服务的入口脚本都会跑
+        # `python -m server.migrate`（同一个 `deploy/entrypoint.sh`）。首次启动时库是空的，
+        # 两个进程同时 `alembic upgrade head` 会在建表上撞成一团（SQLite 锁整库，
+        # 报 `database is locked`），而首次启动恰恰是"一键体验"唯一要走的那条路。
+        # api 的 `/healthz` 只在 uvicorn 起来之后才应答，而迁移排在 exec 之前——
+        # 于是"api 健康"就等价于"结构已经升到 head"，worker 的迁移自然成了空操作。
+        #
+        # 代价是 worker 的**首次启动**被绑在 api 的健康上。可以接受：api 不健康时整个
+        # 部署本来就没法用，而"重启 worker"（`docker compose restart df-worker`）
+        # 不受这条影响。
+        condition: service_healthy
+    # 关掉镜像里的 HEALTHCHECK：那个探针打的是 api 的 HTTP 端口，本进程不开端口。
+    # 不关的话容器会一直被标成 unhealthy——一个永远红的灯比没有灯更糟。
+    healthcheck:
+      disable: true
+
+volumes:
+  df-data:

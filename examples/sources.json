@@ -1,0 +1,57 @@
+{
+  "source_root": "data",
+  "sources": [    {
+      "source_id": "interface-surface",
+      "source_type": "openapi",
+      "title": "接口描述文件",
+      "root": "openapi.json",
+      "priority": 0,
+      "bindings": [
+        {
+          "shape": "operation",
+          "kind": "endpoint",
+          "key": ["module", "path"],
+          "field_map": {"scope": "module"}
+        },
+        {
+          "shape": "schema",
+          "kind": "schema",
+          "key": ["name"]
+        }
+      ],
+      "options": {
+        "scope_default": "未分类"
+      }
+    },
+    {
+      "source_id": "operations-workbook",
+      "source_type": "xlsx",
+      "title": "作业步骤表",
+      "root": "operations.xlsx",
+      "priority": 0,
+      "bindings": [
+        {
+          "shape": "sheet",
+          "kind": "worksheet",
+          "key": ["sheet"]
+        },
+        {
+          "shape": "procedure_row",
+          "kind": "procedure_step",
+          "key": ["step_no"],
+          "field_map": {
+            "步骤": "step_no",
+            "作业内容": "action",
+            "责任人": "owner",
+            "判定阈值": "threshold",
+            "签核": "signoff"
+          }
+        }
+      ],
+      "options": {
+        "header_scan_rows": 5,
+        "row_shape": {"作业步骤": "procedure_row"}
+      }
+    }
+  ]
+}

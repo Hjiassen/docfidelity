@@ -1,0 +1,554 @@
+{
+  "$defs": {
+    "DataBoundary": {
+      "additionalProperties": false,
+      "description": "数据边界只读视图（DD-13.7）。\n\n服务端 ``GET /settings`` 返回本结构，使\"数据不出内网\"在界面上**可见**。",
+      "properties": {
+        "deployment": {
+          "default": "local",
+          "enum": [
+            "local",
+            "intranet",
+            "public"
+          ],
+          "title": "Deployment",
+          "type": "string"
+        },
+        "external_calls": {
+          "default": false,
+          "description": "是否存在任何外部网络调用",
+          "title": "External Calls",
+          "type": "boolean"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "model_base_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model Base Url"
+        },
+        "model_enabled": {
+          "default": false,
+          "title": "Model Enabled",
+          "type": "boolean"
+        },
+        "storage_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Storage Path"
+        }
+      },
+      "title": "DataBoundary",
+      "type": "object"
+    },
+    "DecisionPointRoute": {
+      "additionalProperties": false,
+      "description": "单个决策点的路由配置。\n\n``route`` 为 ``None`` 表示\"由引擎内置的默认路由表决定\"——默认表逐点对应需求 5.2.3\n的分级表，故\"未显式声明\"不等于\"没有归属\"，但配置一旦写了就以配置为准。\n\n``level`` / ``strategy`` / ``confidence_threshold`` 三个字段**同样以 ``None`` 表示\n\"由归属决定\"**。它们不能带非空默认值：配置项里最常写的只有 ``model``（换一个模型），\n若其余字段带默认值，那么\"只换了模型标识\"会顺带把 ``level`` 从 ``confirm`` 压回\n``auto``、把 ``strategy`` 从 ``rule_only`` 换成 ``rule_then_model``——\n而这两处行为改变在配置文本里**完全看不出来**。",
+      "properties": {
+        "confidence_threshold": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "低于此阈值不得自动采用，必须进裁决队列；为空用引擎默认 0.7",
+          "title": "Confidence Threshold"
+        },
+        "fallback": {
+          "default": "rule_default",
+          "description": "模型不可用时的动作；rule_default 保证构建不失败",
+          "enum": [
+            "rule_default",
+            "skip",
+            "queue"
+          ],
+          "title": "Fallback",
+          "type": "string"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "level": {
+          "anyOf": [
+            {
+              "enum": [
+                "auto",
+                "confirm",
+                "manual"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "自动 / 需确认 / 需人工；为空则由归属决定（规则与小模型=自动，可选大模型=需确认，人工=需人工）",
+          "title": "Level"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "模型标识；为空表示用服务端默认模型",
+          "title": "Model"
+        },
+        "route": {
+          "anyOf": [
+            {
+              "enum": [
+                "rule",
+                "small_model",
+                "optional_large_model",
+                "human"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "归属：规则 / 小模型 / 可选大模型 / 人工；为空则由内置默认表决定",
+          "title": "Route"
+        },
+        "strategy": {
+          "anyOf": [
+            {
+              "enum": [
+                "rule_only",
+                "rule_then_model",
+                "model_then_rule"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "采用策略；为空则由归属决定（规则与人工=纯规则，模型两档=先规则后模型）",
+          "title": "Strategy"
+        }
+      },
+      "title": "DecisionPointRoute",
+      "type": "object"
+    },
+    "DocumentEntry": {
+      "additionalProperties": false,
+      "description": "项目内的一份待生成文档。",
+      "properties": {
+        "doc_key": {
+          "description": "项目内唯一键，如 'overview' / 'detail'",
+          "title": "Doc Key",
+          "type": "string"
+        },
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "overrides_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "覆盖配置路径。**只允许修正定位与映射**，不得改样式与版心（DD-7.3）",
+          "title": "Overrides Ref"
+        },
+        "profile_id": {
+          "description": "所用的文档类型档案",
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "source_ids": {
+          "description": "使用的事实源标识",
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "template_ref": {
+          "description": "模板包引用 template_id@version",
+          "title": "Template Ref",
+          "type": "string"
+        },
+        "title": {
+          "description": "显示名",
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "doc_key",
+        "title",
+        "profile_id",
+        "template_ref"
+      ],
+      "title": "DocumentEntry",
+      "type": "object"
+    },
+    "PaginationPolicy": {
+      "additionalProperties": false,
+      "description": "分页策略。\n\n只声明**语义**（哪些内容必须成组），具体 OOXML 属性由渲染层设置\n（``keepNext`` / ``keepLines`` / ``cantSplit`` / 分页符）。",
+      "properties": {
+        "avoid_figure_orphan": {
+          "default": true,
+          "description": "图与图注不分离",
+          "title": "Avoid Figure Orphan",
+          "type": "boolean"
+        },
+        "avoid_row_split": {
+          "default": true,
+          "description": "单行不跨页断开",
+          "title": "Avoid Row Split",
+          "type": "boolean"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "keep_heading_with_next": {
+          "default": true,
+          "description": "标题与后继段落同页",
+          "title": "Keep Heading With Next",
+          "type": "boolean"
+        },
+        "keep_table_header_row": {
+          "default": true,
+          "description": "跨页时表头行重复",
+          "title": "Keep Table Header Row",
+          "type": "boolean"
+        },
+        "min_body_lines_after_heading": {
+          "default": 2,
+          "description": "标题后至少保留的正文行数",
+          "minimum": 0,
+          "title": "Min Body Lines After Heading",
+          "type": "integer"
+        },
+        "page_break_before_chapter": {
+          "default": false,
+          "description": "每章另起一页",
+          "title": "Page Break Before Chapter",
+          "type": "boolean"
+        }
+      },
+      "title": "PaginationPolicy",
+      "type": "object"
+    },
+    "ProjectConfig": {
+      "additionalProperties": false,
+      "description": "项目级配置。写入不覆盖历史：每次写入生成新版本（DD-13.6）。",
+      "properties": {
+        "author": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Author"
+        },
+        "documents": {
+          "items": {
+            "$ref": "#/$defs/DocumentEntry"
+          },
+          "title": "Documents",
+          "type": "array"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "pagination": {
+          "$ref": "#/$defs/PaginationPolicy"
+        },
+        "project_id": {
+          "title": "Project Id",
+          "type": "string"
+        },
+        "retention": {
+          "$ref": "#/$defs/RetentionPolicy"
+        },
+        "routing": {
+          "$ref": "#/$defs/RoutingConfig"
+        },
+        "rule_sets": {
+          "items": {
+            "$ref": "#/$defs/RuleSetRef"
+          },
+          "title": "Rule Sets",
+          "type": "array"
+        },
+        "terminology": {
+          "$ref": "#/$defs/Terminology"
+        },
+        "version": {
+          "default": 1,
+          "description": "自增版本；回滚 = 以历史版本为内容再写一版",
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "project_id"
+      ],
+      "title": "ProjectConfig",
+      "type": "object"
+    },
+    "RetentionPolicy": {
+      "additionalProperties": false,
+      "description": "保留策略（部署级 settings，可按项目覆盖）。",
+      "properties": {
+        "artifacts_days": {
+          "default": 180,
+          "minimum": 1,
+          "title": "Artifacts Days",
+          "type": "integer"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "uploads_days": {
+          "default": 30,
+          "minimum": 1,
+          "title": "Uploads Days",
+          "type": "integer"
+        },
+        "workspace_days": {
+          "default": 30,
+          "minimum": 1,
+          "title": "Workspace Days",
+          "type": "integer"
+        }
+      },
+      "title": "RetentionPolicy",
+      "type": "object"
+    },
+    "RoutingConfig": {
+      "additionalProperties": false,
+      "description": "决策点路由表：决策点标识 -> 路由配置。",
+      "properties": {
+        "decision_points": {
+          "additionalProperties": {
+            "$ref": "#/$defs/DecisionPointRoute"
+          },
+          "title": "Decision Points",
+          "type": "object"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "model_enabled": {
+          "default": true,
+          "description": "总开关；False 时全链路走规则，产出仍完整（验收 39）",
+          "title": "Model Enabled",
+          "type": "boolean"
+        }
+      },
+      "title": "RoutingConfig",
+      "type": "object"
+    },
+    "RuleSetRef": {
+      "additionalProperties": false,
+      "description": "规则集引用与项目级覆盖。",
+      "properties": {
+        "excluded_rules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Excluded Rules",
+          "type": "array"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "included_rules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Included Rules",
+          "type": "array"
+        },
+        "param_overrides": {
+          "additionalProperties": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Param Overrides",
+          "type": "object"
+        },
+        "rule_set_id": {
+          "title": "Rule Set Id",
+          "type": "string"
+        },
+        "severity_overrides": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Severity Overrides",
+          "type": "object"
+        }
+      },
+      "required": [
+        "rule_set_id"
+      ],
+      "title": "RuleSetRef",
+      "type": "object"
+    },
+    "Terminology": {
+      "additionalProperties": false,
+      "description": "术语表。作用域由档案的 ``bindings.terminology_scope`` 决定。",
+      "properties": {
+        "entries": {
+          "items": {
+            "$ref": "#/$defs/TerminologyEntry"
+          },
+          "title": "Entries",
+          "type": "array"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "scope": {
+          "default": "project",
+          "enum": [
+            "project",
+            "global",
+            "none"
+          ],
+          "title": "Scope",
+          "type": "string"
+        }
+      },
+      "title": "Terminology",
+      "type": "object"
+    },
+    "TerminologyEntry": {
+      "additionalProperties": false,
+      "description": "术语条目。\n\n``forbidden`` 是**禁用写法**列表；命中文档中出现禁用写法即触发术语一致规则\n（FR-M5-08）。空 ``forbidden`` 表示只做统一替换、不做禁用校验。",
+      "properties": {
+        "canonical": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "规范写法；为空表示以 term 为规范",
+          "title": "Canonical"
+        },
+        "forbidden": {
+          "description": "禁用写法",
+          "items": {
+            "type": "string"
+          },
+          "title": "Forbidden",
+          "type": "array"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "term": {
+          "description": "术语标识",
+          "title": "Term",
+          "type": "string"
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "title": "TerminologyEntry",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "docfidelity contracts: config",
+  "x-contract-family": "config",
+  "x-contract-models": [
+    "DataBoundary",
+    "DecisionPointRoute",
+    "DocumentEntry",
+    "PaginationPolicy",
+    "ProjectConfig",
+    "RetentionPolicy",
+    "RoutingConfig",
+    "RuleSetRef",
+    "Terminology",
+    "TerminologyEntry"
+  ]
+}

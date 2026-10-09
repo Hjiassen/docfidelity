@@ -1,0 +1,449 @@
+{
+  "$defs": {
+    "AppliesStatement": {
+      "additionalProperties": false,
+      "description": "适用范围三条判据（需求 2.6.1）。\n\n导出档案包时**必须携带**本结构，用于向使用者说明\"什么模板 / 什么内容源\n适用这套档案\"。三条任一不成立即视为不适配。",
+      "properties": {
+        "content_traceable": {
+          "description": "内容来源为何可追溯（列出事实源）",
+          "title": "Content Traceable",
+          "type": "string"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "layout_source": {
+          "description": "版式来源：模板编号 @ 版本",
+          "title": "Layout Source",
+          "type": "string"
+        },
+        "structure_enumerable": {
+          "description": "章节骨架为何可枚举（可指向 genre.chapter_skeleton）",
+          "title": "Structure Enumerable",
+          "type": "string"
+        }
+      },
+      "required": [
+        "layout_source",
+        "structure_enumerable",
+        "content_traceable"
+      ],
+      "title": "AppliesStatement",
+      "type": "object"
+    },
+    "Bindings": {
+      "additionalProperties": false,
+      "description": "档案与外部资产的绑定。缺失即报 ``E_PROFILE_*_MISSING``。",
+      "properties": {
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "rule_sets": {
+          "description": "门禁规则集标识",
+          "items": {
+            "type": "string"
+          },
+          "title": "Rule Sets",
+          "type": "array"
+        },
+        "template_packages": {
+          "description": "可用模板包引用列表，形如 template_id@version",
+          "items": {
+            "type": "string"
+          },
+          "title": "Template Packages",
+          "type": "array"
+        },
+        "terminology_scope": {
+          "default": "project",
+          "enum": [
+            "project",
+            "global",
+            "none"
+          ],
+          "title": "Terminology Scope",
+          "type": "string"
+        }
+      },
+      "title": "Bindings",
+      "type": "object"
+    },
+    "ChapterSkeletonItem": {
+      "additionalProperties": false,
+      "description": "章节骨架的一项。",
+      "properties": {
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "level": {
+          "minimum": 1,
+          "title": "Level",
+          "type": "integer"
+        },
+        "slots": {
+          "items": {
+            "$ref": "#/$defs/SlotSpec"
+          },
+          "title": "Slots",
+          "type": "array"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "level",
+        "title"
+      ],
+      "title": "ChapterSkeletonItem",
+      "type": "object"
+    },
+    "Convention": {
+      "additionalProperties": false,
+      "description": "体例约定：可被门禁规则引用的具名约束。",
+      "properties": {
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "id": {
+          "description": "约定标识，门禁规则通过它引用本条",
+          "title": "Id",
+          "type": "string"
+        },
+        "rule": {
+          "description": "人类可读的约定描述",
+          "title": "Rule",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "rule"
+      ],
+      "title": "Convention",
+      "type": "object"
+    },
+    "DocTypeProfile": {
+      "additionalProperties": false,
+      "description": "文档类型档案。项目级可覆盖全局同名档案（DD-16.3 配置合并）。",
+      "properties": {
+        "applies": {
+          "$ref": "#/$defs/AppliesStatement"
+        },
+        "bindings": {
+          "$ref": "#/$defs/Bindings"
+        },
+        "doc_type": {
+          "description": "文档类型标识；引擎对该取值不做任何假设",
+          "title": "Doc Type",
+          "type": "string"
+        },
+        "fingerprint": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ProfileFingerprint"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "genre": {
+          "$ref": "#/$defs/GenreSpec"
+        },
+        "profile_id": {
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "projections": {
+          "items": {
+            "$ref": "#/$defs/ProjectionSpec"
+          },
+          "title": "Projections",
+          "type": "array"
+        },
+        "title": {
+          "description": "中文显示名",
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "profile_id",
+        "doc_type",
+        "title",
+        "applies",
+        "genre"
+      ],
+      "title": "DocTypeProfile",
+      "type": "object"
+    },
+    "GenreSpec": {
+      "additionalProperties": false,
+      "description": "体例规格：章节骨架 + 允许的单元类型 + 约定。",
+      "properties": {
+        "allowed_unit_types": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowed Unit Types",
+          "type": "array"
+        },
+        "chapter_skeleton": {
+          "items": {
+            "$ref": "#/$defs/ChapterSkeletonItem"
+          },
+          "title": "Chapter Skeleton",
+          "type": "array"
+        },
+        "conventions": {
+          "items": {
+            "$ref": "#/$defs/Convention"
+          },
+          "title": "Conventions",
+          "type": "array"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        }
+      },
+      "title": "GenreSpec",
+      "type": "object"
+    },
+    "ProfileFingerprint": {
+      "additionalProperties": false,
+      "description": "档案指纹，用于\"改档案后需重跑哪些文档\"的漂移判定。",
+      "properties": {
+        "digest": {
+          "title": "Digest",
+          "type": "string"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "sections": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Sections",
+          "type": "object"
+        }
+      },
+      "required": [
+        "digest"
+      ],
+      "title": "ProfileFingerprint",
+      "type": "object"
+    },
+    "ProjectionSpec": {
+      "additionalProperties": false,
+      "description": "投影规则：如何把领域对象映射为内容单元。\n\n``for_each`` 指向领域集合（``\"<kind>\"`` 或 ``\"<kind>.<字段>\"``）；\n引擎按 ``order_by`` 排序、``filter`` 过滤、``required`` 校验必需字段，\n并递归处理 ``children``。``unit_id`` 由 ``for_each`` 键与投影序号确定性派生。\n\n``slot`` 决定本投影产出的内容单元**落到骨架的哪个槽位**（DD-8.1 的\n``units_by_slot``）。为空时落入保留槽位 ``\"default\"``——而\"default\" 这类未被任何\n章节声明的槽位不会被装配，故 ``compose`` 会为这些单元记一条 Finding\n（静默丢内容是本项目反复踩的坑，见 1.2 各条）。",
+      "properties": {
+        "children": {
+          "items": {
+            "$ref": "#/$defs/ProjectionSpec"
+          },
+          "title": "Children",
+          "type": "array"
+        },
+        "columns": {
+          "description": "table 布局的列定义",
+          "items": {
+            "type": "string"
+          },
+          "title": "Columns",
+          "type": "array"
+        },
+        "fields": {
+          "description": "取用的字段，顺序即呈现顺序",
+          "items": {
+            "type": "string"
+          },
+          "title": "Fields",
+          "type": "array"
+        },
+        "filter": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "description": "过滤条件：字段名 -> 允许取值集合（白名单语义，非表达式）",
+          "title": "Filter",
+          "type": "object"
+        },
+        "for_each": {
+          "description": "领域集合引用，如 '<kind>' 或 '<kind>.<列表字段>'",
+          "title": "For Each",
+          "type": "string"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "group_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "分组字段；分组结果决定章节层次",
+          "title": "Group By"
+        },
+        "layout": {
+          "enum": [
+            "one_section_per",
+            "one_table_per",
+            "one_row_per",
+            "figure"
+          ],
+          "title": "Layout",
+          "type": "string"
+        },
+        "order_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "排序字段",
+          "title": "Order By"
+        },
+        "required": {
+          "description": "缺失即进入裁决队列的字段",
+          "items": {
+            "type": "string"
+          },
+          "title": "Required",
+          "type": "array"
+        },
+        "slot": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "内容单元落位的槽位 id（对应 SlotSpec.slot_id）；为空时落入保留槽位 'default'",
+          "title": "Slot"
+        },
+        "unit": {
+          "enum": [
+            "section",
+            "table",
+            "row",
+            "figure",
+            "screenshot",
+            "para",
+            "bullets"
+          ],
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "unit",
+        "for_each",
+        "layout"
+      ],
+      "title": "ProjectionSpec",
+      "type": "object"
+    },
+    "SlotSpec": {
+      "additionalProperties": false,
+      "description": "章节骨架上的一个可填充槽位。",
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "locator": {
+          "description": "槽位在骨架中的语义定位，如 'chapter[2].section[1]'",
+          "title": "Locator",
+          "type": "string"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "slot_id": {
+          "title": "Slot Id",
+          "type": "string"
+        },
+        "unit_types": {
+          "description": "允许填入的内容单元类型；取值见 contracts.ir.UnitType，此处保持开放以避免环依赖",
+          "items": {
+            "type": "string"
+          },
+          "title": "Unit Types",
+          "type": "array"
+        }
+      },
+      "required": [
+        "slot_id",
+        "locator"
+      ],
+      "title": "SlotSpec",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "docfidelity contracts: profile",
+  "x-contract-family": "profile",
+  "x-contract-models": [
+    "AppliesStatement",
+    "Bindings",
+    "ChapterSkeletonItem",
+    "Convention",
+    "DocTypeProfile",
+    "GenreSpec",
+    "ProfileFingerprint",
+    "ProjectionSpec"
+  ]
+}

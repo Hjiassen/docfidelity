@@ -1,0 +1,85 @@
+{
+  "doc_key": "procedure-sop",
+  "paragraph_count": 101,
+  "style_refs": {
+    "Footer": 1,
+    "Heading1": 4,
+    "Heading2": 7,
+    "TOC1": 3,
+    "TOC2": 8,
+    "TableGrid": 4
+  },
+  "tables": [
+    {
+      "rows": 2,
+      "cols": 4,
+      "widths_twips": [
+        2160,
+        2160,
+        2160,
+        2160
+      ]
+    },
+    {
+      "rows": 3,
+      "cols": 3,
+      "widths_twips": [
+        2880,
+        2880,
+        2880
+      ]
+    },
+    {
+      "rows": 7,
+      "cols": 3,
+      "widths_twips": [
+        2880,
+        2880,
+        2880
+      ]
+    },
+    {
+      "rows": 7,
+      "cols": 3,
+      "widths_twips": [
+        2880,
+        2880,
+        2880
+      ]
+    }
+  ],
+  "pictures": [],
+  "page_breaks": [
+    {
+      "index": -1,
+      "kind": "pageBreakBefore",
+      "before": "版本"
+    },
+    {
+      "index": -1,
+      "kind": "pageBreakBefore",
+      "before": "示例分析仪适用范围1"
+    },
+    {
+      "index": 8,
+      "kind": "pageBreakBefore",
+      "before": "示例分析仪适用范围"
+    },
+    {
+      "index": 10,
+      "kind": "pageBreakBefore",
+      "before": "作业步骤"
+    },
+    {
+      "index": 30,
+      "kind": "pageBreakBefore",
+      "before": "阈值与判定"
+    },
+    {
+      "index": 32,
+      "kind": "pageBreakBefore",
+      "before": "签核记录"
+    }
+  ],
+  "sections": 3
+}

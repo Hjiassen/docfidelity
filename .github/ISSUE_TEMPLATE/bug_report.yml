@@ -1,0 +1,46 @@
+name: 故障反馈
+description: 提供可复现的问题、环境与预期行为。
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        安全漏洞请通过私密安全报告渠道提交。复现材料只使用自造或脱敏数据，不要提供真实客户模板、个人信息、密钥或内部地址。
+  - type: textarea
+    id: problem
+    attributes:
+      label: 问题与预期行为
+      description: 描述实际结果、预期结果及影响。
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 最小复现步骤
+      description: 提供命令、配置或使用自造数据的最小示例。
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 运行环境
+      placeholder: |
+        docfidelity 版本或提交：
+        操作系统 / Python 版本：
+        安装的 extras 或容器部署方式：
+        模型 / Office 是否启用：
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 脱敏日志与错误码
+      description: 可附 trace id 与 EngineError.code，请先移除密钥、内部地址和业务数据。
+      render: text
+  - type: checkboxes
+    id: sanitized
+    attributes:
+      label: 数据边界
+      options:
+        - label: 我确认反馈中不含真实客户模板、个人信息、密钥或内部地址。
+          required: true

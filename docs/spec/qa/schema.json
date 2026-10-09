@@ -1,0 +1,710 @@
+{
+  "$defs": {
+    "Adjudication": {
+      "additionalProperties": false,
+      "description": "一次人工裁决的留痕（FR-M7-06 / NFR-15 / 需求 4.6.7）。\n\n为什么与 :class:`Waiver` 分开\n-----------------------------\n豁免只是三种规范动作之一，而且它与``接受``在**数据上**完全不同：豁免有有效期、\n有作用域、会改变 ``verdict``；接受与改配置只是留痕。把接受也塞进 ``waivers``，\n会让\"这份报告被豁免了几条\"这个数字变成\"这份报告被人看过几条\"，而报告汇总卡\n上那个数字正是定稿判据。\n\n``subject_id`` 而不是 ``finding_id``\n-----------------------------------\n待裁决项有两类：门禁判定（:attr:`Finding.finding_id`）与**待确认的决策项**\n（``Decision.decision_id``，模型低置信走了规则默认值的那条）。DD-13.2 只给了\n一条裁决提交路径，两类待办共用同一套规范动作——为决策项另开一条路径，\n等于让\"裁决\"的语义在两处各定义一次。故这里按\"**待裁决项**\"命名。",
+      "properties": {
+        "action": {
+          "enum": [
+            "accept",
+            "configure",
+            "waive"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "adjudication_id": {
+          "title": "Adjudication Id",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "operator": {
+          "description": "责任人；必填，可追溯性的一半（NFR-15）",
+          "title": "Operator",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "理由；``action=waive`` 时必填",
+          "title": "Reason"
+        },
+        "subject_id": {
+          "description": "待裁决项标识：门禁判定 id 或决策项 id",
+          "title": "Subject Id",
+          "type": "string"
+        },
+        "waiver_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "仅 ``action=waive``",
+          "title": "Waiver Id"
+        }
+      },
+      "required": [
+        "adjudication_id",
+        "subject_id",
+        "action",
+        "operator",
+        "created_at"
+      ],
+      "title": "Adjudication",
+      "type": "object"
+    },
+    "Finding": {
+      "additionalProperties": false,
+      "description": "一条判定结果。\n\n``finding_id`` 为什么是一个字段\n------------------------------\n界面要能**指认**一条判定才能对它提交裁决（``POST /findings/{fid}/decisions``），\n而在那之前 ``Finding`` 只有内容、没有身份——调用方唯一能用的坐标是\"报告里第几条\"，\n那等于让前端自己算一个标识（DD-14.3 禁止的\"前端推断\"），而且一旦有人重排\n``findings``，\"第 3 条\"就悄悄指向了另一条规则。\n\n标识由 ``qa`` 在产出报告时赋值（``<报告标识>@<序号>``），故它**不参与**任何判定：\n是用户级可选项，缺失时接口层按\"这条判定不可寻址\"处理，而不是回退到下标。",
+      "properties": {
+        "evidence": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "命中的具体内容片段，供人工复核",
+          "title": "Evidence"
+        },
+        "finding_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "可寻址标识（``<报告标识>@<序号>``）；由 qa 产出报告时赋值",
+          "title": "Finding Id"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "location": {
+          "$ref": "#/$defs/Location"
+        },
+        "message": {
+          "description": "面向使用者的中文说明",
+          "title": "Message",
+          "type": "string"
+        },
+        "rule_id": {
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "blocker",
+            "major",
+            "minor"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "status": {
+          "default": "open",
+          "enum": [
+            "open",
+            "waived",
+            "fixed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "suggestion": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "可执行建议",
+          "title": "Suggestion"
+        },
+        "waiver_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Waiver Id"
+        }
+      },
+      "required": [
+        "rule_id",
+        "severity",
+        "message"
+      ],
+      "title": "Finding",
+      "type": "object"
+    },
+    "Location": {
+      "additionalProperties": false,
+      "description": "问题的定位。定位必须**足够具体**，以便界面直接跳到对应位置。\n\n内容类问题给 ``unit_id`` + ``chapter_path``；样式类问题给 ``part`` + ``xpath``；\n目检类问题补 ``page_hint``。",
+      "properties": {
+        "chapter_path": {
+          "description": "章节路径，如 ['概述','范围']",
+          "items": {
+            "type": "string"
+          },
+          "title": "Chapter Path",
+          "type": "array"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "page_hint": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "目检图页码（若可用）",
+          "title": "Page Hint"
+        },
+        "part": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "OOXML 部件名（样式 / 版式类命中才有）",
+          "title": "Part"
+        },
+        "unit_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "定位到内容单元",
+          "title": "Unit Id"
+        },
+        "xpath": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "精确到节点",
+          "title": "Xpath"
+        }
+      },
+      "title": "Location",
+      "type": "object"
+    },
+    "Report": {
+      "additionalProperties": false,
+      "description": "门禁报告。\n\n``verdict`` 的算法由服务端给出，前端**不得推断**（唯一实现 = :func:`verdict_of`）：\n\n* 存在未豁免的 ``blocker`` -> ``blocked``\n* 否则存在未豁免的 ``major`` / ``minor`` -> ``warning``\n* 否则 -> ``pass``\n\n``skipped`` 为什么是一个字段\n---------------------------\n\"跳过了哪几条规则、因为缺哪项能力\"原本只写在 ``summary`` 那句散文里。\n一旦需要**重算**摘要（人工裁决之后必须重算，否则报告自相矛盾），散文里的话就\n提取不出来了——于是\"跳过\"这条信息会在第一次裁决后静默消失。做成字段之后，\n重算只需 :meth:`recompute`，而\"跳过\"作为数据可被查、可被断言。",
+      "properties": {
+        "adjudications": {
+          "description": "人工裁决留痕（FR-M7-06）；与 waivers 并存：豁免只是三种动作之一",
+          "items": {
+            "$ref": "#/$defs/Adjudication"
+          },
+          "title": "Adjudications",
+          "type": "array"
+        },
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/Finding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "generated_at": {
+          "format": "date-time",
+          "title": "Generated At",
+          "type": "string"
+        },
+        "job_id": {
+          "title": "Job Id",
+          "type": "string"
+        },
+        "report_id": {
+          "title": "Report Id",
+          "type": "string"
+        },
+        "skipped": {
+          "description": "因缺依赖能力而跳过的规则（``rule_id(缺 能力)``）；**不是**「跑过且通过」",
+          "items": {
+            "type": "string"
+          },
+          "title": "Skipped",
+          "type": "array"
+        },
+        "summary": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Summary"
+        },
+        "verdict": {
+          "default": "pass",
+          "enum": [
+            "pass",
+            "warning",
+            "blocked"
+          ],
+          "title": "Verdict",
+          "type": "string"
+        },
+        "waivers": {
+          "items": {
+            "$ref": "#/$defs/Waiver"
+          },
+          "title": "Waivers",
+          "type": "array"
+        }
+      },
+      "required": [
+        "report_id",
+        "job_id",
+        "generated_at"
+      ],
+      "title": "Report",
+      "type": "object"
+    },
+    "Rule": {
+      "additionalProperties": false,
+      "description": "一条门禁规则。\n\n规则以 YAML 声明、以 Python 断言函数实现（DD-10.1）。``params`` 承载阈值类参数，\n使同一实现可被多套规则集以不同阈值复用。",
+      "properties": {
+        "category": {
+          "enum": [
+            "style",
+            "layout",
+            "terminology",
+            "integrity",
+            "trace",
+            "spotcheck",
+            "meta"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "convention_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "关联档案 conventions.id，用于说明规则来自哪条体例约定",
+          "title": "Convention Ref"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "params": {
+          "additionalProperties": true,
+          "title": "Params",
+          "type": "object"
+        },
+        "requires": {
+          "description": "依赖的引擎能力标识；缺失时该规则应被跳过而非报错",
+          "items": {
+            "type": "string"
+          },
+          "title": "Requires",
+          "type": "array"
+        },
+        "rule_id": {
+          "description": "规则编号，如 FR-M5-07",
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "blocker",
+            "major",
+            "minor"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rule_id",
+        "category",
+        "severity",
+        "title"
+      ],
+      "title": "Rule",
+      "type": "object"
+    },
+    "RuleSet": {
+      "additionalProperties": false,
+      "description": "规则集：内置规则 + 项目覆盖。",
+      "properties": {
+        "excluded_rules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Excluded Rules",
+          "type": "array"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "included_rules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Included Rules",
+          "type": "array"
+        },
+        "param_overrides": {
+          "additionalProperties": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Param Overrides",
+          "type": "object"
+        },
+        "rule_set_id": {
+          "title": "Rule Set Id",
+          "type": "string"
+        },
+        "severity_overrides": {
+          "additionalProperties": {
+            "enum": [
+              "blocker",
+              "major",
+              "minor"
+            ],
+            "type": "string"
+          },
+          "title": "Severity Overrides",
+          "type": "object"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        }
+      },
+      "required": [
+        "rule_set_id"
+      ],
+      "title": "RuleSet",
+      "type": "object"
+    },
+    "SnapshotDiff": {
+      "additionalProperties": false,
+      "description": "稳定化比对结果（DD-10.4）。",
+      "properties": {
+        "added": {
+          "description": "新增节点路径",
+          "items": {
+            "type": "string"
+          },
+          "title": "Added",
+          "type": "array"
+        },
+        "baseline_ref": {
+          "title": "Baseline Ref",
+          "type": "string"
+        },
+        "candidate_ref": {
+          "title": "Candidate Ref",
+          "type": "string"
+        },
+        "changed": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Changed",
+          "type": "array"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "normalized": {
+          "default": true,
+          "description": "是否已归一化易变标识；False 时结论不可用于门禁",
+          "title": "Normalized",
+          "type": "boolean"
+        },
+        "removed": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Removed",
+          "type": "array"
+        }
+      },
+      "required": [
+        "baseline_ref",
+        "candidate_ref"
+      ],
+      "title": "SnapshotDiff",
+      "type": "object"
+    },
+    "TraceEdge": {
+      "additionalProperties": false,
+      "description": "追溯边：内容单元 <- 领域对象。",
+      "properties": {
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "locator": {
+          "title": "Locator",
+          "type": "string"
+        },
+        "object_ref": {
+          "description": "领域对象引用，形如 '<kind>:<key 各段以 / 连接>'",
+          "title": "Object Ref",
+          "type": "string"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "unit_id": {
+          "title": "Unit Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "unit_id",
+        "object_ref",
+        "source",
+        "locator"
+      ],
+      "title": "TraceEdge",
+      "type": "object"
+    },
+    "TraceMatrix": {
+      "additionalProperties": false,
+      "description": "追溯矩阵。\n\n* ``orphans``：在文档里但查不到来源的单元\n* ``unused``：在事实源里但未进入文档的对象\n\n两者都是**信息**而非错误——但必须呈现出来，让使用者判断是否遗漏。",
+      "properties": {
+        "edges": {
+          "items": {
+            "$ref": "#/$defs/TraceEdge"
+          },
+          "title": "Edges",
+          "type": "array"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "orphans": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Orphans",
+          "type": "array"
+        },
+        "unused": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Unused",
+          "type": "array"
+        }
+      },
+      "title": "TraceMatrix",
+      "type": "object"
+    },
+    "Waiver": {
+      "additionalProperties": false,
+      "description": "豁免。豁免必须有理由与操作人，并可设置过期时间。",
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "expires_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "过期后豁免自动失效",
+          "title": "Expires At"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "operator": {
+          "title": "Operator",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "rule_id": {
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "scope": {
+          "default": "instance",
+          "enum": [
+            "instance",
+            "project",
+            "global"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "instance 范围时的具体对象标识",
+          "title": "Target"
+        },
+        "waiver_id": {
+          "title": "Waiver Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "waiver_id",
+        "rule_id",
+        "reason",
+        "operator",
+        "created_at"
+      ],
+      "title": "Waiver",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "docfidelity contracts: qa",
+  "x-contract-family": "qa",
+  "x-contract-models": [
+    "Adjudication",
+    "Finding",
+    "Location",
+    "Report",
+    "Rule",
+    "RuleSet",
+    "SnapshotDiff",
+    "TraceEdge",
+    "TraceMatrix",
+    "Waiver"
+  ]
+}

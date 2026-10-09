@@ -1,0 +1,41 @@
+{
+  "format_version": "1.0.0",
+  "kind": "decision",
+  "run_id": "demo",
+  "decision_point": "dedup.semantic_duplicate",
+  "instructions": "a1c261c7bc35e636d2274ad0ebbfe68cfc7a11939825ba5bb1c9772f1a6c773e",
+  "request": {
+    "decision_point": "dedup.semantic_duplicate",
+    "target": "",
+    "candidates": [
+      "duplicate",
+      "distinct"
+    ],
+    "inputs": {
+      "left": "新增订单查询接口（POST /orders/query）",
+      "right": "提供订单检索能力，入参与 /orders/query 相同"
+    },
+    "context": {
+      "source": "openapi",
+      "path": "/orders/query"
+    },
+    "feedback": [],
+    "job_id": "replay-demo"
+  },
+  "outcome": {
+    "ok": true,
+    "payload": {
+      "is_duplicate": true,
+      "reason": "两条描述指向同一路径与同一入参，语义上是一条变更"
+    },
+    "chosen": "duplicate",
+    "confidence": 0.93,
+    "schema_ok": true,
+    "model": "replay",
+    "tokens_in": 128,
+    "tokens_out": 24,
+    "latency_ms": 210
+  },
+  "instruction": null,
+  "intent": null
+}

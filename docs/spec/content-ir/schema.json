@@ -1,0 +1,348 @@
+{
+  "$defs": {
+    "ContentIR": {
+      "additionalProperties": false,
+      "description": "一次构建产出的完整内容 IR。\n\n它同时是**可导出的对外格式**：``docs/spec/content-ir/`` 下有对应 JSON Schema。",
+      "properties": {
+        "doc_key": {
+          "description": "项目内的文档条目键，如 'detail' / 'testplan'",
+          "title": "Doc Key",
+          "type": "string"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "profile_id": {
+          "description": "生成所用的文档类型档案",
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "project_id": {
+          "title": "Project Id",
+          "type": "string"
+        },
+        "source_digests": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "事实源标识 -> 内容摘要，用于判定输入是否变化",
+          "title": "Source Digests",
+          "type": "object"
+        },
+        "template_ref": {
+          "description": "生成所用的模板包引用 template_id@version",
+          "title": "Template Ref",
+          "type": "string"
+        },
+        "units": {
+          "items": {
+            "$ref": "#/$defs/ContentUnit"
+          },
+          "title": "Units",
+          "type": "array"
+        },
+        "unresolved": {
+          "description": "未能解析的引用（slot_id / trace key），进入裁决队列",
+          "items": {
+            "type": "string"
+          },
+          "title": "Unresolved",
+          "type": "array"
+        }
+      },
+      "required": [
+        "project_id",
+        "doc_key",
+        "profile_id",
+        "template_ref"
+      ],
+      "title": "ContentIR",
+      "type": "object"
+    },
+    "ContentUnit": {
+      "additionalProperties": false,
+      "description": "IR 的最小单元。可嵌套（``children``），形成章节树。",
+      "properties": {
+        "children": {
+          "items": {
+            "$ref": "#/$defs/ContentUnit"
+          },
+          "title": "Children",
+          "type": "array"
+        },
+        "fields": {
+          "additionalProperties": true,
+          "description": "体例声明的字段。table 见 TableData，figure/screenshot 见 FigureData",
+          "title": "Fields",
+          "type": "object"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "level": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "heading 专用层级",
+          "title": "Level"
+        },
+        "origin": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OriginRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "正文文本；表格 / 图片单元为 None",
+          "title": "Text"
+        },
+        "trace": {
+          "description": "领域对象 key 列表，构成追溯边",
+          "items": {
+            "type": "string"
+          },
+          "title": "Trace",
+          "type": "array"
+        },
+        "type": {
+          "enum": [
+            "heading",
+            "para",
+            "bullets",
+            "numbered",
+            "table",
+            "figure",
+            "screenshot",
+            "trace",
+            "pagebreak",
+            "block_ref"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "unit_id": {
+          "description": "稳定 ID，由投影路径派生；必须确定性可复现",
+          "title": "Unit Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "unit_id",
+        "type"
+      ],
+      "title": "ContentUnit",
+      "type": "object"
+    },
+    "FigureData": {
+      "additionalProperties": false,
+      "description": "``type == \"figure\"`` / ``\"screenshot\"`` 时 ``fields`` 的约定结构。\n\n尺寸只给**像素 + DPI**，不给 twips——换算与等比缩放属渲染层职责（DD-4.4）。",
+      "properties": {
+        "caption": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Caption"
+        },
+        "caption_slot": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Caption Slot"
+        },
+        "dpi": {
+          "default": 96,
+          "exclusiveMinimum": 0,
+          "title": "Dpi",
+          "type": "integer"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "height_px": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Height Px"
+        },
+        "image_ref": {
+          "description": "工作区内图片逻辑名，由 ingest 落盘并登记",
+          "title": "Image Ref",
+          "type": "string"
+        },
+        "width_px": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Width Px"
+        }
+      },
+      "required": [
+        "image_ref"
+      ],
+      "title": "FigureData",
+      "type": "object"
+    },
+    "OriginRef": {
+      "additionalProperties": false,
+      "description": "内容单元的来源事实引用。\n\n追溯链的最后一跳：``ContentUnit.trace`` 给出领域对象 key，\n``OriginRef`` 给出该对象在事实源中的落点与可信度。",
+      "properties": {
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "locator": {
+          "description": "源内定位，如 'paths./api/x.get' 或 'Sheet1!A12'",
+          "title": "Locator",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "description": "冲突裁决优先级，越大越优先",
+          "title": "Priority",
+          "type": "integer"
+        },
+        "source": {
+          "description": "事实源标识，如 'openapi' / 'xlsx:用例表'",
+          "title": "Source",
+          "type": "string"
+        },
+        "verified": {
+          "default": true,
+          "description": "是否已通过该源的接入校验",
+          "title": "Verified",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "source",
+        "locator"
+      ],
+      "title": "OriginRef",
+      "type": "object"
+    },
+    "TableData": {
+      "additionalProperties": false,
+      "description": "``type == \"table\"`` 时 ``fields`` 的约定结构。\n\n注意：**不含任何列宽信息**——列宽由渲染层按模板表格原型与版心推导，\nIR 给出绝对列宽会让样式保真失效。",
+      "properties": {
+        "caption": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "表注文本，编号由渲染层填充",
+          "title": "Caption"
+        },
+        "caption_slot": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "表注编号槽位；None 表示不编号",
+          "title": "Caption Slot"
+        },
+        "columns": {
+          "description": "列标题，顺序即列序",
+          "items": {
+            "type": "string"
+          },
+          "title": "Columns",
+          "type": "array"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "rows": {
+          "description": "行数据；每行长度应等于 columns 长度",
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": "Rows",
+          "type": "array"
+        }
+      },
+      "required": [
+        "columns",
+        "rows"
+      ],
+      "title": "TableData",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "docfidelity contracts: content-ir",
+  "x-contract-family": "content-ir",
+  "x-contract-models": [
+    "ContentIR",
+    "ContentUnit",
+    "FigureData",
+    "OriginRef",
+    "TableData"
+  ]
+}

@@ -1,0 +1,50 @@
+# pre-commit 钩子（DD-2.4）
+# 安装：pre-commit install
+# 手动全量：pre-commit run --all-files
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: ["--allow-multiple-documents"]
+      - id: check-toml
+      - id: check-json
+      - id: check-added-large-files
+        args: ["--maxkb=2048"]
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+      - id: no-commit-to-branch
+        args: ["--branch", "main"]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: ["--fix", "--exit-non-zero-on-fix"]
+      - id: ruff-format
+
+  # 自定义门禁：与 CI 共用同一批脚本，避免两套规则漂移
+  - repo: local
+    hooks:
+      - id: max-file-lines
+        name: 单文件行数上限 800（NFR-09）
+        entry: python scripts/check_line_limit.py
+        language: system
+        types: [python]
+
+      - id: forbidden-words
+        name: 类型无关检索：禁用词命中必须为 0（NFR-28 / 验收 42）
+        entry: python scripts/check_forbidden_words.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: kernel-no-web
+        name: 内核不得引入 Web / DB 依赖（决策四）
+        entry: python scripts/check_kernel_no_web.py
+        language: system
+        pass_filenames: false
+        always_run: true

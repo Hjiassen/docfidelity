@@ -1,0 +1,135 @@
+{
+  "format_version": "1.0.0",
+  "profile_id": "api-summary",
+  "doc_type": "api-summary",
+  "title": "接口总表（一模块一表型）",
+  "applies": {
+    "layout_source": "demo-software-design@1",
+    "structure_enumerable": "章节骨架见 genre.chapter_skeleton；与该模板包的 outline.slots 结构坐标一一对应，与 api-sectioned 档案共用同一个模板包",
+    "content_traceable": "内容全部来自 source_id=interface-surface（data/openapi.json），与 api-sectioned 档案读同一份事实包"
+  },
+  "genre": {
+    "chapter_skeleton": [
+      {
+        "level": 1,
+        "title": "概述",
+        "slots": [
+          {
+            "slot_id": "scope_list",
+            "locator": "chapter[1]",
+            "required": true,
+            "unit_types": ["bullets"]
+          }
+        ]
+      },
+      {
+        "level": 1,
+        "title": "接口清单",
+        "slots": [
+          {
+            "slot_id": "module_tables",
+            "locator": "chapter[2]",
+            "required": true,
+            "unit_types": ["table"]
+          }
+        ]
+      },
+      {
+        "level": 2,
+        "title": "参数说明",
+        "slots": [
+          {
+            "slot_id": "auth_index",
+            "locator": "chapter[2].section[1]",
+            "required": true,
+            "unit_types": ["table"]
+          }
+        ]
+      },
+      {
+        "level": 1,
+        "title": "数据表",
+        "slots": [
+          {
+            "slot_id": "schema_index",
+            "locator": "chapter[3]",
+            "required": true,
+            "unit_types": ["table"]
+          }
+        ]
+      },
+      {
+        "level": 1,
+        "title": "参考资料",
+        "slots": [
+          {
+            "slot_id": "refs",
+            "locator": "chapter[4]",
+            "required": true,
+            "unit_types": ["table"]
+          }
+        ]
+      }
+    ],
+    "allowed_unit_types": ["heading", "bullets", "table"],
+    "conventions": [
+      {
+        "id": "one_table_per_module",
+        "rule": "接口清单一章按模块汇总，一个模块一张表，粒度是模块而不是接口"
+      },
+      {
+        "id": "auth_scope_only",
+        "rule": "参数说明一节只列需要鉴权的接口"
+      }
+    ]
+  },
+  "projections": [
+    {
+      "unit": "bullets",
+      "for_each": "endpoint",
+      "layout": "one_row_per",
+      "slot": "scope_list",
+      "fields": ["path"],
+      "order_by": "path"
+    },
+    {
+      "unit": "table",
+      "for_each": "endpoint",
+      "group_by": "module",
+      "layout": "one_table_per",
+      "slot": "module_tables",
+      "columns": ["method", "path", "summary", "parameter_count"],
+      "order_by": "path"
+    },
+    {
+      "unit": "row",
+      "for_each": "endpoint",
+      "layout": "one_row_per",
+      "slot": "auth_index",
+      "fields": ["module", "path", "method"],
+      "order_by": "path",
+      "filter": {"auth_required": ["true"]}
+    },
+    {
+      "unit": "table",
+      "for_each": "schema",
+      "layout": "one_table_per",
+      "slot": "schema_index",
+      "columns": ["name", "property_count"],
+      "order_by": "name"
+    },
+    {
+      "unit": "row",
+      "for_each": "schema",
+      "layout": "one_row_per",
+      "slot": "refs",
+      "fields": ["name", "description"],
+      "order_by": "name"
+    }
+  ],
+  "bindings": {
+    "template_packages": ["demo-software-design@1"],
+    "rule_sets": ["base_style"],
+    "terminology_scope": "project"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "format_version": "1.0.0",
+  "project_id": "demo",
+  "version": 1,
+  "author": "docfidelity 示例",
+  "documents": [
+    {
+      "doc_key": "api-sectioned",
+      "title": "接口说明（一条接口一节）",
+      "profile_id": "api-sectioned",
+      "template_ref": "demo-software-design@1",
+      "source_ids": ["interface-surface"]
+    },
+    {
+      "doc_key": "api-summary",
+      "title": "接口汇总（一模块一表）",
+      "profile_id": "api-summary",
+      "template_ref": "demo-software-design@1",
+      "source_ids": ["interface-surface"]
+    },
+    {
+      "doc_key": "procedure-sop",
+      "title": "作业规程（非软件域：步骤 / 阈值 / 签核栏）",
+      "profile_id": "procedure-sop",
+      "template_ref": "demo-operations@1",
+      "source_ids": ["operations-workbook"]
+    }
+  ],
+  "pagination": {
+    "page_break_before_chapter": true
+  },
+  "terminology": {
+    "scope": "project",
+    "entries": [
+      {
+        "term": "系统名",
+        "canonical": "示例分析仪",
+        "forbidden": ["示例分析议"],
+        "note": "forbidden 与 canonical 刻意不互为子串，才能验证「旧称归一」而不是「子串替换」"
+      }
+    ]
+  },
+  "rule_sets": [{ "rule_set_id": "base_style" }]
+}

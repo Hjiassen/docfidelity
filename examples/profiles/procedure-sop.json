@@ -1,0 +1,143 @@
+{
+  "format_version": "1.0.0",
+  "profile_id": "procedure-sop",
+  "doc_type": "procedure-sop",
+  "title": "作业规程（非软件域）",
+  "applies": {
+    "layout_source": "demo-operations@1",
+    "structure_enumerable": "章节骨架见 genre.chapter_skeleton；槽位 locator 与模板包 outline.slots 一一对应（chapter[1] / chapter[2] / chapter[2].section[1] / chapter[3] / chapter[4]）",
+    "content_traceable": "作业步骤来自 source_id=operations-workbook（data/operations.xlsx，逐行形态），数据来源清单来自同一工作簿的 sheet 事实"
+  },
+  "genre": {
+    "chapter_skeleton": [
+      {
+        "level": 1,
+        "title": "{{系统名}}适用范围",
+        "slots": [
+          {
+            "slot_id": "scope_sources",
+            "locator": "chapter[1]",
+            "required": true,
+            "unit_types": ["table"]
+          }
+        ]
+      },
+      {
+        "level": 1,
+        "title": "作业步骤",
+        "slots": [
+          {
+            "slot_id": "steps",
+            "locator": "chapter[2]",
+            "required": true,
+            "unit_types": ["heading"]
+          }
+        ]
+      },
+      {
+        "level": 2,
+        "title": "步骤要点",
+        "slots": [
+          {
+            "slot_id": "step_points",
+            "locator": "chapter[2].section[1]",
+            "required": true,
+            "unit_types": ["bullets"]
+          }
+        ]
+      },
+      {
+        "level": 1,
+        "title": "阈值与判定",
+        "slots": [
+          {
+            "slot_id": "thresholds",
+            "locator": "chapter[3]",
+            "required": true,
+            "unit_types": ["table"]
+          }
+        ]
+      },
+      {
+        "level": 1,
+        "title": "签核记录",
+        "slots": [
+          {
+            "slot_id": "signoffs",
+            "locator": "chapter[4]",
+            "required": true,
+            "unit_types": ["table"]
+          }
+        ]
+      }
+    ],
+    "allowed_unit_types": ["heading", "para", "bullets", "table"],
+    "conventions": [
+      {
+        "id": "threshold_is_comparison",
+        "rule": "判定阈值写成可核对的比较式（如「<= 5 mm」），不写「合格 / 不合格」这类结论"
+      },
+      {
+        "id": "signoff_for_every_step",
+        "rule": "每条作业步骤都必须有签核栏位，签核人不得留空"
+      }
+    ]
+  },
+  "projections": [
+    {
+      "unit": "table",
+      "for_each": "worksheet",
+      "layout": "one_table_per",
+      "slot": "scope_sources",
+      "columns": ["sheet", "row_count", "col_count"],
+      "order_by": "sheet"
+    },
+    {
+      "unit": "section",
+      "for_each": "procedure_step",
+      "layout": "one_section_per",
+      "slot": "steps",
+      "fields": ["step_no", "action"],
+      "order_by": "step_no",
+      "required": ["step_no", "action"],
+      "children": [
+        {
+          "unit": "para",
+          "for_each": "procedure_step",
+          "layout": "one_section_per",
+          "fields": ["action"]
+        }
+      ]
+    },
+    {
+      "unit": "bullets",
+      "for_each": "procedure_step",
+      "layout": "one_row_per",
+      "slot": "step_points",
+      "fields": ["action"],
+      "order_by": "step_no"
+    },
+    {
+      "unit": "table",
+      "for_each": "procedure_step",
+      "layout": "one_table_per",
+      "slot": "thresholds",
+      "columns": ["step_no", "action", "threshold"],
+      "order_by": "step_no"
+    },
+    {
+      "unit": "row",
+      "for_each": "procedure_step",
+      "layout": "one_row_per",
+      "slot": "signoffs",
+      "fields": ["step_no", "owner", "signoff"],
+      "order_by": "step_no",
+      "required": ["signoff"]
+    }
+  ],
+  "bindings": {
+    "template_packages": ["demo-operations@1"],
+    "rule_sets": ["base_style"],
+    "terminology_scope": "project"
+  }
+}

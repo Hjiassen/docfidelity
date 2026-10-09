@@ -1,0 +1,75 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ---- 虚拟环境 ----
+.venv/
+venv/
+env/
+
+# ---- 测试与覆盖率 ----
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.hypothesis/
+
+# ---- 引擎工作区（运行时数据，不入库）----
+workspaces/
+!workspaces/.gitkeep
+
+# ---- 服务端运行期数据（settings 默认 storage_root / 开发服务器的根）----
+var/
+.devdata/
+# 落库部署的默认位置（`DOCFIDELITY_DATABASE_URL=sqlite:///./data/df.db`）。
+# 库文件是**数据**不是代码：一次误提交会把别人的作业记录带进版本库。
+data/
+
+# ---- 前端（web/）----
+# 依赖与构建产物不入库；`web/openapi.json` 与 `src/api/schema.d.ts` **要入库**：
+# 前者是接口形状的变更痕迹（改了服务端模型而没重跑 dump_openapi，diff 里看得见），
+# 后者是从它生成的前端类型，两者一起进版本库才谈得上"接口变更有据可查"。
+web/node_modules/
+web/dist/
+web/*.tsbuildinfo
+# Vite 加载 vite.config.ts 时会落下带时间戳的临时转译产物，每次启动都换名，
+# 不忽略就会在 git status 里持续冒新文件。
+web/vite.config.ts.timestamp-*
+
+# ---- 本地环境变量 ----
+.env
+.env.local
+*.local.toml
+
+# ---- 协作工具的项目数据（记忆 / 临时脚本），入库无意义 ----
+.workbuddy/
+
+# ---- 编辑器 / 系统 ----
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- 保留：示例产物需要入库的目录 ----
+!demo-templates/**
+!examples/**
+!tests/golden/**
+!tests/fixtures/**
+
+# 示例目录的保留规则不能重新纳入 Python 运行缓存。
+**/__pycache__/
+**/*.py[cod]

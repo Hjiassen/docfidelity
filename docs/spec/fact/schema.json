@@ -1,0 +1,579 @@
+{
+  "$defs": {
+    "AssetRef": {
+      "additionalProperties": false,
+      "description": "工作区内一个二进制资产的登记条目。",
+      "properties": {
+        "dpi": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dpi"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "height_px": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Height Px"
+        },
+        "logical_name": {
+          "description": "逻辑名，IR 与追溯边引用此名而非路径",
+          "title": "Logical Name",
+          "type": "string"
+        },
+        "media_type": {
+          "description": "MIME 类型",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "relative_path": {
+          "description": "相对工作区根的路径",
+          "title": "Relative Path",
+          "type": "string"
+        },
+        "sha256": {
+          "title": "Sha256",
+          "type": "string"
+        },
+        "size_bytes": {
+          "minimum": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        },
+        "width_px": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Width Px"
+        }
+      },
+      "required": [
+        "logical_name",
+        "relative_path",
+        "media_type",
+        "sha256",
+        "size_bytes"
+      ],
+      "title": "AssetRef",
+      "type": "object"
+    },
+    "ConflictCandidate": {
+      "additionalProperties": false,
+      "description": "冲突的一个候选值。",
+      "properties": {
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "locator": {
+          "title": "Locator",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "title": "Priority",
+          "type": "integer"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value"
+        },
+        "verified": {
+          "default": true,
+          "title": "Verified",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "value",
+        "source",
+        "locator"
+      ],
+      "title": "ConflictCandidate",
+      "type": "object"
+    },
+    "ConflictRecord": {
+      "additionalProperties": false,
+      "description": "同一对象同一字段出现多个不同取值时的记录。\n\n``resolution`` 为 ``unresolved`` 的冲突必须进入裁决队列，\n**不得静默采用**（验收 39）。",
+      "properties": {
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/ConflictCandidate"
+          },
+          "title": "Candidates",
+          "type": "array"
+        },
+        "chosen": {
+          "default": null,
+          "title": "Chosen"
+        },
+        "field": {
+          "title": "Field",
+          "type": "string"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "key": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Key",
+          "type": "array"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "resolution": {
+          "default": "unresolved",
+          "enum": [
+            "priority",
+            "manual",
+            "unresolved"
+          ],
+          "title": "Resolution",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "key",
+        "field"
+      ],
+      "title": "ConflictRecord",
+      "type": "object"
+    },
+    "EngineErrorInfo": {
+      "additionalProperties": false,
+      "description": "可持久化的错误快照。\n\n落库位置：``stages.error``。与 :class:`EngineError` 分离的原因是把**异常**\n（控制流）与**快照**（数据）分开——快照可以直接进 JSON 响应与数据库，\n异常对象不行。",
+      "properties": {
+        "code": {
+          "description": "错误码，取值见 ErrorCode",
+          "title": "Code",
+          "type": "string"
+        },
+        "fatal": {
+          "default": true,
+          "description": "False 表示可降级继续，不作为失败终态",
+          "title": "Fatal",
+          "type": "boolean"
+        },
+        "message": {
+          "description": "面向使用者的中文说明",
+          "title": "Message",
+          "type": "string"
+        },
+        "remediation": {
+          "description": "可执行动作清单",
+          "items": {
+            "type": "string"
+          },
+          "title": "Remediation",
+          "type": "array"
+        },
+        "where": {
+          "additionalProperties": true,
+          "description": "结构化定位信息",
+          "title": "Where",
+          "type": "object"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "EngineErrorInfo",
+      "type": "object"
+    },
+    "Fact": {
+      "additionalProperties": false,
+      "description": "一条原始事实。\n\n``key`` 的顺序必须与对应 :class:`~docfidelity.contracts.domain.DomainModel` 的\n``key`` 一致——归一化与去重都依赖这一点。",
+      "properties": {
+        "asset_names": {
+          "description": "本事实关联的资产逻辑名",
+          "items": {
+            "type": "string"
+          },
+          "title": "Asset Names",
+          "type": "array"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "key": {
+          "description": "标识键取值，顺序与领域模型的 key 一致",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Key",
+          "type": "array"
+        },
+        "kind": {
+          "description": "领域类型",
+          "title": "Kind",
+          "type": "string"
+        },
+        "locator": {
+          "description": "源内定位，用于报错定位与追溯",
+          "title": "Locator",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": true,
+          "description": "原始字段值",
+          "title": "Payload",
+          "type": "object"
+        },
+        "priority": {
+          "default": 0,
+          "description": "冲突裁决优先级，越大越优先",
+          "title": "Priority",
+          "type": "integer"
+        },
+        "source": {
+          "description": "事实源标识",
+          "title": "Source",
+          "type": "string"
+        },
+        "verified": {
+          "default": true,
+          "description": "是否通过该源的接入校验",
+          "title": "Verified",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "source",
+        "kind",
+        "key",
+        "locator"
+      ],
+      "title": "Fact",
+      "type": "object"
+    },
+    "FactBundle": {
+      "additionalProperties": false,
+      "description": "单个事实源的产出。",
+      "properties": {
+        "assets": {
+          "items": {
+            "$ref": "#/$defs/AssetRef"
+          },
+          "title": "Assets",
+          "type": "array"
+        },
+        "digest": {
+          "description": "内容摘要，用于判定输入是否变化",
+          "title": "Digest",
+          "type": "string"
+        },
+        "facts": {
+          "items": {
+            "$ref": "#/$defs/Fact"
+          },
+          "title": "Facts",
+          "type": "array"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "loaded_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "元数据，不参与逻辑判定",
+          "title": "Loaded At"
+        },
+        "source_id": {
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_type": {
+          "enum": [
+            "openapi",
+            "ast",
+            "orm",
+            "proto",
+            "xlsx",
+            "markdown",
+            "assets",
+            "manual"
+          ],
+          "title": "Source Type",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "非致命问题：记下来但不阻断（fatal=False）",
+          "items": {
+            "$ref": "#/$defs/EngineErrorInfo"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "source_id",
+        "source_type",
+        "digest"
+      ],
+      "title": "FactBundle",
+      "type": "object"
+    },
+    "FactSnapshot": {
+      "additionalProperties": false,
+      "description": "多源合并后的稳定输入。``compose`` 只读本模型，不直接接触事实包。",
+      "properties": {
+        "conflicts": {
+          "items": {
+            "$ref": "#/$defs/ConflictRecord"
+          },
+          "title": "Conflicts",
+          "type": "array"
+        },
+        "digest": {
+          "description": "合并结果的整体摘要",
+          "title": "Digest",
+          "type": "string"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "merged": {
+          "description": "去重与裁决后的对象集合",
+          "items": {
+            "$ref": "#/$defs/Fact"
+          },
+          "title": "Merged",
+          "type": "array"
+        },
+        "project_id": {
+          "title": "Project Id",
+          "type": "string"
+        },
+        "source_digests": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "事实源标识 -> 摘要",
+          "title": "Source Digests",
+          "type": "object"
+        }
+      },
+      "required": [
+        "project_id",
+        "digest"
+      ],
+      "title": "FactSnapshot",
+      "type": "object"
+    },
+    "KindBinding": {
+      "additionalProperties": false,
+      "description": "把接入器产出的**形态**映射到外部声明的领域类型（FR-M1-13 / FR-M1-14）。\n\n为什么要这一层：接入器天然认识\"操作 / 表 / 列 / 图\"这类**形态**，而领域类型\n（``kind``）与标识键是**外部数据**。二者之间的映射一旦写进引擎代码，\"引擎与文档\n类型无关\"就破了。因此映射以配置形式给出，引擎只查表、不作判断。\n\n``shape`` 是接入器内部形态标识；``kind`` / ``key`` 必须与领域模型声明一致\n（``key`` 是**改名后**的字段名，顺序即键序）。``field_map`` 把来源侧裸字段名\n改写成领域声明的字段名——这是\"不同来源的同名对象可合并、可去重\"的前提。\n\n注意 ``key`` 与 ``field_map`` 的先后：``field_map`` 先执行，``key`` 里写的必须是\n**改名之后**的名字。写错了不会报错，只会得到空键——两条不同的记录会被折叠成一条。\n接入器对此有显式校验（``ingest.emitter``），键名取不到时当场失败。",
+      "properties": {
+        "field_map": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "来源字段名 -> 领域字段名；未列出者原样保留",
+          "title": "Field Map",
+          "type": "object"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "key": {
+          "description": "构成标识键的字段名（field_map 之后的名字），顺序即键序",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Key",
+          "type": "array"
+        },
+        "kind": {
+          "description": "映射到的领域类型，取值由外部档案声明",
+          "title": "Kind",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "description": "该形态产出的冲突裁决优先级",
+          "title": "Priority",
+          "type": "integer"
+        },
+        "shape": {
+          "description": "接入器内部形态标识",
+          "title": "Shape",
+          "type": "string"
+        }
+      },
+      "required": [
+        "shape",
+        "kind",
+        "key"
+      ],
+      "title": "KindBinding",
+      "type": "object"
+    },
+    "SourceConfig": {
+      "additionalProperties": false,
+      "description": "一个事实源实例的配置（``fact-sources.yaml`` 的一行，DD-5.1 / DD-16）。\n\n``source_type`` 同时充当接入器注册名——选择哪个接入器是**数据**，不是分支。\n每个形态通过 :class:`KindBinding` 声明目标领域类型；未绑定的形态**不得静默丢弃**，\n接入器必须给出 Finding（否则\"少了一整章\"会伪装成\"这份来源本来就没有\"）。",
+      "properties": {
+        "bindings": {
+          "description": "形态 -> 领域类型映射",
+          "items": {
+            "$ref": "#/$defs/KindBinding"
+          },
+          "title": "Bindings",
+          "type": "array"
+        },
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "options": {
+          "additionalProperties": true,
+          "description": "接入器私有参数",
+          "title": "Options",
+          "type": "object"
+        },
+        "priority": {
+          "default": 0,
+          "description": "本源默认优先级，越大越优先",
+          "title": "Priority",
+          "type": "integer"
+        },
+        "root": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "文件或目录，相对工作区根",
+          "title": "Root"
+        },
+        "source_id": {
+          "description": "事实源标识，事实与冲突记录都引用它",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_type": {
+          "description": "接入器注册名",
+          "enum": [
+            "openapi",
+            "ast",
+            "orm",
+            "proto",
+            "xlsx",
+            "markdown",
+            "assets",
+            "manual"
+          ],
+          "title": "Source Type",
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "中文显示名，仅用于界面与报告",
+          "title": "Title"
+        }
+      },
+      "required": [
+        "source_id",
+        "source_type"
+      ],
+      "title": "SourceConfig",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "docfidelity contracts: fact",
+  "x-contract-family": "fact",
+  "x-contract-models": [
+    "AssetRef",
+    "ConflictCandidate",
+    "ConflictRecord",
+    "Fact",
+    "FactBundle",
+    "FactSnapshot",
+    "KindBinding",
+    "SourceConfig"
+  ]
+}

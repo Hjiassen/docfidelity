@@ -1,0 +1,88 @@
+[
+  {
+    "kind": "endpoint",
+    "title": "接口",
+    "key": ["module", "path"],
+    "fields": {
+      "module": {"type": "str", "required": true, "description": "所属模块（来自来源标签）"},
+      "path": {"type": "str", "required": true},
+      "method": {
+        "type": "enum",
+        "values": ["GET", "POST", "PUT", "DELETE"],
+        "required": true
+      },
+      "summary": {"type": "str"},
+      "auth_required": {"type": "bool"},
+      "parameter_count": {"type": "int"},
+      "parameters": {"type": "list", "of": "parameter"},
+      "responses": {"type": "list", "of": "response"}
+    },
+    "comparable": ["method", "summary", "auth_required"],
+    "traceable": ["module", "path"]
+  },
+  {
+    "kind": "parameter",
+    "title": "参数",
+    "key": ["name"],
+    "fields": {
+      "name": {"type": "str", "required": true},
+      "type": {"type": "str", "required": true},
+      "required": {"type": "bool"},
+      "desc": {"type": "str"},
+      "source": {"type": "str"}
+    },
+    "comparable": ["type", "required"],
+    "traceable": ["name"]
+  },
+  {
+    "kind": "response",
+    "title": "响应",
+    "key": ["code"],
+    "fields": {
+      "code": {"type": "str", "required": true},
+      "desc": {"type": "str"}
+    },
+    "comparable": ["desc"],
+    "traceable": ["code"]
+  },
+  {
+    "kind": "schema",
+    "title": "数据结构",
+    "key": ["name"],
+    "fields": {
+      "name": {"type": "str", "required": true},
+      "type": {"type": "str"},
+      "property_count": {"type": "int"},
+      "description": {"type": "str"}
+    },
+    "comparable": ["type", "property_count"],
+    "traceable": ["name"]
+  },
+  {
+    "kind": "worksheet",
+    "title": "数据来源表",
+    "key": ["sheet"],
+    "fields": {
+      "sheet": {"type": "str", "required": true},
+      "index": {"type": "int"},
+      "row_count": {"type": "int"},
+      "col_count": {"type": "int"}
+    },
+    "comparable": ["row_count", "col_count"],
+    "traceable": ["sheet"]
+  },
+  {
+    "kind": "procedure_step",
+    "title": "作业步骤",
+    "key": ["step_no"],
+    "fields": {
+      "step_no": {"type": "str", "required": true},
+      "action": {"type": "str", "required": true},
+      "owner": {"type": "str"},
+      "threshold": {"type": "str"},
+      "signoff": {"type": "str"}
+    },
+    "comparable": ["action", "owner"],
+    "traceable": ["step_no"]
+  }
+]

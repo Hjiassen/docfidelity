@@ -1,0 +1,166 @@
+{
+  "format_version": "1.0.0",
+  "profile_id": "api-sectioned",
+  "doc_type": "api-sectioned",
+  "title": "接口参考（一接口一节型）",
+  "applies": {
+    "layout_source": "demo-software-design@1",
+    "structure_enumerable": "章节骨架见 genre.chapter_skeleton；每个槽位的 locator 与模板包 outline.slots 的结构坐标一一对应（chapter[1] / chapter[2] / chapter[2].section[1] / chapter[3] / chapter[4]）",
+    "content_traceable": "内容全部来自 source_id=interface-surface（data/openapi.json），每条事实带 locator"
+  },
+  "genre": {
+    "chapter_skeleton": [
+      {
+        "level": 1,
+        "title": "概述",
+        "slots": [
+          {
+            "slot_id": "overview",
+            "locator": "chapter[1]",
+            "required": true,
+            "unit_types": ["bullets"]
+          }
+        ]
+      },
+      {
+        "level": 1,
+        "title": "接口清单",
+        "slots": [
+          {
+            "slot_id": "api_overview",
+            "locator": "chapter[2]",
+            "required": true,
+            "unit_types": ["table"]
+          },
+          {
+            "slot_id": "apis",
+            "locator": "chapter[2]",
+            "required": true,
+            "unit_types": ["heading"]
+          }
+        ]
+      },
+      {
+        "level": 2,
+        "title": "参数说明",
+        "slots": [
+          {
+            "slot_id": "api_index",
+            "locator": "chapter[2].section[1]",
+            "required": true,
+            "unit_types": ["table"]
+          }
+        ]
+      },
+      {
+        "level": 1,
+        "title": "数据表",
+        "slots": [
+          {
+            "slot_id": "schemas",
+            "locator": "chapter[3]",
+            "required": true,
+            "unit_types": ["table"]
+          }
+        ]
+      },
+      {
+        "level": 1,
+        "title": "参考资料",
+        "slots": [
+          {
+            "slot_id": "refs",
+            "locator": "chapter[4]",
+            "required": true,
+            "unit_types": ["bullets"]
+          }
+        ]
+      }
+    ],
+    "allowed_unit_types": ["heading", "para", "bullets", "table"],
+    "conventions": [
+      {
+        "id": "one_section_per_endpoint",
+        "rule": "接口清单一章按接口逐条展开，一条接口一节，节内先参数表、后响应表"
+      },
+      {
+        "id": "index_before_details",
+        "rule": "先给汇总表再逐条展开：章节开头是汇总表，逐条内容排在其后"
+      },
+      {
+        "id": "no_trailing_period",
+        "rule": "表格单元格内的说明文字不带句末句号"
+      }
+    ]
+  },
+  "projections": [
+    {
+      "unit": "bullets",
+      "for_each": "endpoint",
+      "layout": "one_row_per",
+      "slot": "overview",
+      "fields": ["path"],
+      "order_by": "path"
+    },
+    {
+      "unit": "table",
+      "for_each": "endpoint",
+      "layout": "one_table_per",
+      "slot": "api_overview",
+      "columns": ["module", "method", "path", "summary"],
+      "order_by": "path"
+    },
+    {
+      "unit": "section",
+      "for_each": "endpoint",
+      "layout": "one_section_per",
+      "slot": "apis",
+      "fields": ["path", "method", "summary"],
+      "order_by": "path",
+      "required": ["path", "method"],
+      "children": [
+        {
+          "unit": "table",
+          "for_each": "endpoint.parameters",
+          "layout": "one_table_per",
+          "columns": ["name", "type", "required", "desc"]
+        },
+        {
+          "unit": "table",
+          "for_each": "endpoint.responses",
+          "layout": "one_table_per",
+          "columns": ["code", "desc"]
+        }
+      ]
+    },
+    {
+      "unit": "row",
+      "for_each": "endpoint",
+      "layout": "one_row_per",
+      "slot": "api_index",
+      "fields": ["path", "parameter_count"],
+      "order_by": "path"
+    },
+    {
+      "unit": "table",
+      "for_each": "schema",
+      "layout": "one_table_per",
+      "slot": "schemas",
+      "columns": ["name", "type", "property_count", "description"],
+      "order_by": "name"
+    },
+    {
+      "unit": "bullets",
+      "for_each": "schema",
+      "layout": "one_row_per",
+      "slot": "refs",
+      "fields": ["name"],
+      "order_by": "name"
+    }
+  ],
+  "bindings": {
+    "template_packages": ["demo-software-design@1"],
+    "rule_sets": ["base_style"],
+    "terminology_scope": "project"
+  }
+}

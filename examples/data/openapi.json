@@ -1,0 +1,136 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "示例服务接口描述",
+    "version": "1.0.0",
+    "description": "本文件是 examples/ 的自制输入，不是任何真实系统的导出。"
+  },
+  "security": [{"tokenAuth": []}],
+  "paths": {
+    "/inventory/adjust": {
+      "post": {
+        "tags": ["库存"],
+        "operationId": "adjustInventory",
+        "summary": "调整库存数量",
+        "requestBody": {
+          "required": true,
+          "description": "调整单",
+          "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Adjustment"}}}
+        },
+        "security": [{"tokenAuth": []}],
+        "responses": {
+          "200": {"description": "调整成功"},
+          "409": {"description": "并发冲突"}
+        }
+      }
+    },
+    "/orders": {
+      "post": {
+        "tags": ["订单"],
+        "operationId": "createOrder",
+        "summary": "创建订单",
+        "requestBody": {
+          "required": true,
+          "description": "订单体",
+          "content": {"application/json": {"schema": {"$ref": "#/components/schemas/OrderCreate"}}}
+        },
+        "responses": {
+          "201": {"description": "创建成功"},
+          "400": {"description": "参数不合法"}
+        }
+      }
+    },
+    "/orders/{id}": {
+      "get": {
+        "tags": ["订单"],
+        "operationId": "getOrder",
+        "summary": "查询订单详情",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "订单号",
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {"description": "订单详情"},
+          "404": {"description": "订单不存在"}
+        }
+      }
+    },
+    "/orders/{id}/cancel": {
+      "put": {
+        "tags": ["订单"],
+        "operationId": "cancelOrder",
+        "summary": "取消订单",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "订单号",
+            "schema": {"type": "string"}
+          }
+        ],
+        "security": [{"tokenAuth": []}],
+        "responses": {"200": {"description": "已取消"}}
+      }
+    },
+    "/users": {
+      "get": {
+        "tags": ["用户"],
+        "operationId": "listUsers",
+        "summary": "分页查询用户",
+        "parameters": [
+          {"name": "page", "in": "query", "required": false, "description": "页码", "schema": {"type": "integer"}},
+          {"name": "size", "in": "query", "required": false, "description": "每页条数", "schema": {"type": "integer"}}
+        ],
+        "security": [{"tokenAuth": []}],
+        "responses": {"200": {"description": "用户列表"}}
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "tokenAuth": {"type": "http", "scheme": "bearer"}
+    },
+    "schemas": {
+      "Adjustment": {
+        "type": "object",
+        "description": "库存调整单",
+        "properties": {
+          "sku": {"type": "string"},
+          "delta": {"type": "integer"},
+          "reason": {"type": "string"}
+        }
+      },
+      "OrderCreate": {
+        "type": "object",
+        "description": "创建订单的请求体",
+        "properties": {
+          "sku": {"type": "string"},
+          "quantity": {"type": "integer"},
+          "remark": {"type": "string"}
+        }
+      },
+      "OrderView": {
+        "type": "object",
+        "description": "订单详情",
+        "properties": {
+          "id": {"type": "string"},
+          "status": {"type": "string"}
+        }
+      },
+      "UserSummary": {
+        "type": "object",
+        "description": "用户摘要",
+        "properties": {
+          "id": {"type": "string"},
+          "name": {"type": "string"}
+        }
+      }
+    }
+  }
+}

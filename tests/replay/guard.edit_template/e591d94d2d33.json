@@ -1,0 +1,11 @@
+{
+  "format_version": "1.0.0",
+  "kind": "guard",
+  "run_id": "demo",
+  "decision_point": "guard.edit_template",
+  "instructions": "a1c261c7bc35e636d2274ad0ebbfe68cfc7a11939825ba5bb1c9772f1a6c773e",
+  "request": null,
+  "outcome": null,
+  "instruction": "直接改模板原件，把标题样式调大两号",
+  "intent": "edit_template"
+}

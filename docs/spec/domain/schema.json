@@ -1,0 +1,296 @@
+{
+  "$defs": {
+    "DomainModel": {
+      "additionalProperties": false,
+      "description": "领域模型的**声明**（schema）。``kind`` 开放。",
+      "properties": {
+        "comparable": {
+          "description": "参与稳定化比对的字段；未列出者不参与 diff",
+          "items": {
+            "type": "string"
+          },
+          "title": "Comparable",
+          "type": "array"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "fields": {
+          "additionalProperties": {
+            "$ref": "#/$defs/FieldSchema"
+          },
+          "title": "Fields",
+          "type": "object"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "key": {
+          "description": "标识键字段名，顺序即键序；用于去重与追溯",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Key",
+          "type": "array"
+        },
+        "kind": {
+          "description": "领域类型标识；引擎对其取值不做任何假设",
+          "title": "Kind",
+          "type": "string"
+        },
+        "title": {
+          "description": "中文显示名，用于界面与报告",
+          "title": "Title",
+          "type": "string"
+        },
+        "traceable": {
+          "description": "构成追溯边标识的字段；通常等于 key 的子集",
+          "items": {
+            "type": "string"
+          },
+          "title": "Traceable",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "title",
+        "key"
+      ],
+      "title": "DomainModel",
+      "type": "object"
+    },
+    "DomainObject": {
+      "additionalProperties": false,
+      "description": "领域模型的**实例**。\n\n``fields`` 为字段值（对应 :class:`DomainModel.fields` 的 schema）。\n引擎只按 ``kind`` + ``key`` 索引它，不对具体字段语义做判断。",
+      "properties": {
+        "fields": {
+          "additionalProperties": true,
+          "title": "Fields",
+          "type": "object"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "key": {
+          "description": "标识键取值，顺序与 DomainModel.key 一致",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Key",
+          "type": "array"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "origin": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DomainObjectOrigin"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "kind",
+        "key"
+      ],
+      "title": "DomainObject",
+      "type": "object"
+    },
+    "DomainObjectOrigin": {
+      "additionalProperties": false,
+      "description": "领域对象在事实源中的落点。",
+      "properties": {
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "locator": {
+          "description": "源内定位（文件:行 / JSON 指针 / 单元格）",
+          "title": "Locator",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "description": "冲突裁决优先级，越大越优先",
+          "title": "Priority",
+          "type": "integer"
+        },
+        "source": {
+          "description": "事实源标识",
+          "title": "Source",
+          "type": "string"
+        },
+        "verified": {
+          "default": true,
+          "title": "Verified",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "source",
+        "locator"
+      ],
+      "title": "DomainObjectOrigin",
+      "type": "object"
+    },
+    "DomainObjectRef": {
+      "additionalProperties": false,
+      "description": "领域对象的轻量引用，用于 ``ContentUnit.trace`` 与追溯矩阵。\n\n字符串形式为 ``\"<kind>:<key 各段以 / 连接>\"``。",
+      "properties": {
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "key": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Key",
+          "type": "array"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "key"
+      ],
+      "title": "DomainObjectRef",
+      "type": "object"
+    },
+    "FieldSchema": {
+      "additionalProperties": false,
+      "description": "单字段的声明。",
+      "properties": {
+        "default": {
+          "default": null,
+          "title": "Default"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "fields": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "$ref": "#/$defs/FieldSchema"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "object 的嵌套字段声明",
+          "title": "Fields"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "of": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "list 的成员 kind（引用另一个领域模型）",
+          "title": "Of"
+        },
+        "required": {
+          "default": false,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "type": {
+          "enum": [
+            "str",
+            "int",
+            "float",
+            "bool",
+            "enum",
+            "list",
+            "object",
+            "datetime",
+            "path",
+            "asset"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "values": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "enum 的取值域，必须非空",
+          "title": "Values"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "FieldSchema",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "docfidelity contracts: domain",
+  "x-contract-family": "domain",
+  "x-contract-models": [
+    "DomainModel",
+    "DomainObject",
+    "DomainObjectOrigin",
+    "DomainObjectRef",
+    "FieldSchema"
+  ]
+}

@@ -1,0 +1,862 @@
+{
+  "$defs": {
+    "Artifact": {
+      "additionalProperties": false,
+      "description": "构建产物登记条目。",
+      "properties": {
+        "artifact_id": {
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "expires_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "过期后取件报 E_ARTIFACT_EXPIRED",
+          "title": "Expires At"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "job_id": {
+          "title": "Job Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "docx",
+            "pdf",
+            "png",
+            "report",
+            "repro_package",
+            "other"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "relative_path": {
+          "title": "Relative Path",
+          "type": "string"
+        },
+        "sha256": {
+          "title": "Sha256",
+          "type": "string"
+        },
+        "size_bytes": {
+          "minimum": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "job_id",
+        "kind",
+        "relative_path",
+        "size_bytes",
+        "sha256",
+        "created_at"
+      ],
+      "title": "Artifact",
+      "type": "object"
+    },
+    "CheckpointRef": {
+      "additionalProperties": false,
+      "description": "阶段上的 checkpoint 引用。",
+      "properties": {
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "inputs_hash": {
+          "title": "Inputs Hash",
+          "type": "string"
+        },
+        "stage": {
+          "title": "Stage",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "stage",
+        "version",
+        "inputs_hash"
+      ],
+      "title": "CheckpointRef",
+      "type": "object"
+    },
+    "ChildProgress": {
+      "additionalProperties": false,
+      "description": "编排作业的进度视图（仅编排作业使用）。",
+      "properties": {
+        "current_child": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Current Child"
+        },
+        "done": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Done",
+          "type": "integer"
+        },
+        "failed": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Failed",
+          "type": "integer"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "total": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "title": "ChildProgress",
+      "type": "object"
+    },
+    "Decision": {
+      "additionalProperties": false,
+      "description": "一次决策留痕。\n\n低置信（``confidence`` 低于档案 / 规则集阈值）或 ``status=\"pending\"`` 的决策，\n必须在界面上进入裁决队列；**不得静默采用**（验收 39）。",
+      "properties": {
+        "chosen": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chosen"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "decision_id": {
+          "title": "Decision Id",
+          "type": "string"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "job_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Job Id"
+        },
+        "kind": {
+          "description": "决策点标识",
+          "title": "Kind",
+          "type": "string"
+        },
+        "options": {
+          "items": {
+            "$ref": "#/$defs/DecisionOption"
+          },
+          "title": "Options",
+          "type": "array"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "source": {
+          "default": "rule_default",
+          "enum": [
+            "rule_default",
+            "model",
+            "manual",
+            "fallback"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "status": {
+          "default": "auto",
+          "enum": [
+            "auto",
+            "pending",
+            "confirmed",
+            "rejected"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "target": {
+          "description": "作用对象：单元 id / 槽位 id / 模板引用等",
+          "title": "Target",
+          "type": "string"
+        }
+      },
+      "required": [
+        "decision_id",
+        "kind",
+        "target",
+        "created_at"
+      ],
+      "title": "Decision",
+      "type": "object"
+    },
+    "DecisionOption": {
+      "additionalProperties": false,
+      "description": "一个候选选项。低置信选项必须给出 ``reason``，供人在裁决队列中判断。",
+      "properties": {
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "DecisionOption",
+      "type": "object"
+    },
+    "EngineErrorInfo": {
+      "additionalProperties": false,
+      "description": "可持久化的错误快照。\n\n落库位置：``stages.error``。与 :class:`EngineError` 分离的原因是把**异常**\n（控制流）与**快照**（数据）分开——快照可以直接进 JSON 响应与数据库，\n异常对象不行。",
+      "properties": {
+        "code": {
+          "description": "错误码，取值见 ErrorCode",
+          "title": "Code",
+          "type": "string"
+        },
+        "fatal": {
+          "default": true,
+          "description": "False 表示可降级继续，不作为失败终态",
+          "title": "Fatal",
+          "type": "boolean"
+        },
+        "message": {
+          "description": "面向使用者的中文说明",
+          "title": "Message",
+          "type": "string"
+        },
+        "remediation": {
+          "description": "可执行动作清单",
+          "items": {
+            "type": "string"
+          },
+          "title": "Remediation",
+          "type": "array"
+        },
+        "where": {
+          "additionalProperties": true,
+          "description": "结构化定位信息",
+          "title": "Where",
+          "type": "object"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "EngineErrorInfo",
+      "type": "object"
+    },
+    "Job": {
+      "additionalProperties": false,
+      "description": "作业。\n\n``kind=\"orchestration\"`` 表示一次\"构建整套文档\"的编排作业，其 ``child_job_ids``\n指向各文档子作业；``kind=\"document\"`` 表示单份文档的构建。",
+      "properties": {
+        "artifact_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Artifact Ids",
+          "type": "array"
+        },
+        "child_job_ids": {
+          "description": "仅编排作业",
+          "items": {
+            "type": "string"
+          },
+          "title": "Child Job Ids",
+          "type": "array"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "doc_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "仅文档子作业",
+          "title": "Doc Key"
+        },
+        "doc_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "仅文档子作业；引擎不假设取值",
+          "title": "Doc Type"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EngineErrorInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "initiated_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "发起人（界面作业列表的「发起人」列）。审计用，**不参与任何判定**",
+          "title": "Initiated By"
+        },
+        "inputs_hash": {
+          "title": "Inputs Hash",
+          "type": "string"
+        },
+        "job_id": {
+          "title": "Job Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "orchestration",
+            "document"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "parent_job_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Job Id"
+        },
+        "progress": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChildProgress"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "仅编排作业"
+        },
+        "project_id": {
+          "title": "Project Id",
+          "type": "string"
+        },
+        "status": {
+          "default": "queued",
+          "enum": [
+            "queued",
+            "running",
+            "awaiting_decision",
+            "succeeded",
+            "failed",
+            "partial_failure",
+            "canceled"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "job_id",
+        "kind",
+        "project_id",
+        "created_at",
+        "inputs_hash"
+      ],
+      "title": "Job",
+      "type": "object"
+    },
+    "JobEvent": {
+      "additionalProperties": false,
+      "description": "作业事件，SSE 推送与断线回放的载体（DD-11.6）。\n\n纪律：**先落库再推送**——``event_id`` 单调自增，客户端用 ``Last-Event-ID``\n续推；连接断开不影响作业。",
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "event_id": {
+          "description": "作业内单调自增序号",
+          "minimum": 1,
+          "title": "Event Id",
+          "type": "integer"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "job_id": {
+          "title": "Job Id",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": true,
+          "title": "Payload",
+          "type": "object"
+        },
+        "type": {
+          "enum": [
+            "job",
+            "stage",
+            "decision",
+            "artifact",
+            "log"
+          ],
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "job_id",
+        "type",
+        "created_at"
+      ],
+      "title": "JobEvent",
+      "type": "object"
+    },
+    "ModelCall": {
+      "additionalProperties": false,
+      "description": "一次模型调用留痕（Tracing）。\n\n失败时 ``ok=False`` 且 ``fallback_used=True``——这**不是**构建失败，\n只是决策降级（NFR-26 / 验收 39）。",
+      "properties": {
+        "call_id": {
+          "title": "Call Id",
+          "type": "string"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "decision_point": {
+          "title": "Decision Point",
+          "type": "string"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EngineErrorInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "fallback_used": {
+          "default": false,
+          "title": "Fallback Used",
+          "type": "boolean"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "job_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Job Id"
+        },
+        "latency_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Latency Ms"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        },
+        "ok": {
+          "default": true,
+          "title": "Ok",
+          "type": "boolean"
+        },
+        "route": {
+          "description": "路由目标：agent 名 / 规划器标识",
+          "title": "Route",
+          "type": "string"
+        },
+        "tokens_in": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tokens In"
+        },
+        "tokens_out": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tokens Out"
+        }
+      },
+      "required": [
+        "call_id",
+        "decision_point",
+        "route",
+        "created_at"
+      ],
+      "title": "ModelCall",
+      "type": "object"
+    },
+    "Stage": {
+      "additionalProperties": false,
+      "description": "子作业内的一个阶段。",
+      "properties": {
+        "checkpoint": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CheckpointRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EngineErrorInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Finished At"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "name": {
+          "enum": [
+            "ingest",
+            "compose",
+            "render",
+            "refresh",
+            "qa"
+          ],
+          "title": "Name",
+          "type": "string"
+        },
+        "progress": {
+          "default": 0.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Progress",
+          "type": "number"
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Started At"
+        },
+        "status": {
+          "default": "pending",
+          "enum": [
+            "pending",
+            "running",
+            "succeeded",
+            "failed",
+            "skipped"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Stage",
+      "type": "object"
+    },
+    "StageCheckpoint": {
+      "additionalProperties": false,
+      "description": "阶段断点。\n\n``outputs`` 记录\"逻辑名 -> 工作区相对路径\"，使后续阶段可以只按逻辑名取件，\n不关心物理布局。",
+      "properties": {
+        "created_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Created At"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "inputs_hash": {
+          "description": "本阶段输入的摘要；变化即不得复用",
+          "title": "Inputs Hash",
+          "type": "string"
+        },
+        "outputs": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Outputs",
+          "type": "object"
+        },
+        "stage": {
+          "title": "Stage",
+          "type": "string"
+        },
+        "version": {
+          "description": "阶段实现版本，取值见 STAGE_IMPL_VERSION",
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "stage",
+        "inputs_hash",
+        "version"
+      ],
+      "title": "StageCheckpoint",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "docfidelity contracts: job",
+  "x-contract-family": "job",
+  "x-contract-models": [
+    "Artifact",
+    "CheckpointRef",
+    "ChildProgress",
+    "Decision",
+    "DecisionOption",
+    "Job",
+    "JobEvent",
+    "ModelCall",
+    "Stage",
+    "StageCheckpoint"
+  ]
+}

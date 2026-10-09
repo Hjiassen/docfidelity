@@ -1,0 +1,45 @@
+# 类型无关检索词表（NFR-28 / 验收 42 / 附录 B）
+# 本文件是 CI 门禁与 qa.type_agnostic 的**唯一**词表来源，禁止两处各写一份。
+#
+# 检索范围：src/docfidelity/**（编译后的 AST，非文本），以及构建期产出的 Content IR。
+# 白名单：docs/**、examples/**、demo-templates/**、tests/fixtures/**、
+#         src/docfidelity/contracts/domain.py（仅作示例声明的字段名）。
+#
+# 分组语义：
+#   [doc_type_name]   文档类型名 —— 引擎代码中不得出现任何具体文档类型
+#   [domain_concept]  领域概念名 —— 不得作为标识符或字面量出现在引擎代码中
+#   [branch_literal]  分支字面量 —— 不得出现 `x == "<字面量>"` 形式的类型分支
+#
+# 格式：每行一个词；`#` 起始为注释；空行忽略。
+
+[doc_type_name]
+概要设计
+详细设计
+数据库设计
+接口设计
+接口测试方案
+测试方案
+需求规格
+用户手册
+投标文件
+技术方案
+操作规程
+
+[domain_concept]
+接口
+数据表
+字段
+测试用例
+工序
+条款
+参数
+样例数据
+
+[branch_literal]
+endpoint
+table
+field
+testcase
+procedure
+clause
+parameter

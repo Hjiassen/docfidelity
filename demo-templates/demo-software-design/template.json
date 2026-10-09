@@ -1,0 +1,24 @@
+{
+  "template_id": "demo-software-design",
+  "version": "1",
+  "doc_type": "software-design",
+  "notes": "自制示例模板：软件交付类文档（多级编号 + 表格原型 + 长/宽图槽位 + 冗余模块）",
+  "source": "template.docx",
+  "package": "package",
+  "covers": [
+    "多级标题 + 自动编号",
+    "封面 + 修订记录 + 页眉页脚",
+    "多种表格原型（含合并单元格、跨行跨列）",
+    "目录域 + 页码 + 分节",
+    "长图与宽图槽位",
+    "带编写说明的占位内容",
+    "列表段落原型（项目符号）"
+  ],
+  "gaps": [
+    {
+      "item": "跨模板组合（封面取 A、修订表取 B）",
+      "reason": "render 层未实现 BlockEntry.cross_template_ref：注入只认工作副本这一个包，档案的 bindings.template_packages 目前只用于登记期引用校验"
+    }
+  ],
+  "ingest_findings": 1
+}

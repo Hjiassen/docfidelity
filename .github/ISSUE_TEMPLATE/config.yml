@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 私密安全报告
+    url: https://github.com/Hjiassen/docfidelity/security/advisories/new
+    about: 漏洞与数据边界问题请通过此渠道私密报告。

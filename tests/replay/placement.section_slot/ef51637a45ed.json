@@ -1,0 +1,48 @@
+{
+  "format_version": "1.0.0",
+  "kind": "decision",
+  "run_id": "demo",
+  "decision_point": "placement.section_slot",
+  "instructions": "a1c261c7bc35e636d2274ad0ebbfe68cfc7a11939825ba5bb1c9772f1a6c773e",
+  "request": {
+    "decision_point": "placement.section_slot",
+    "target": "",
+    "candidates": [
+      "概述",
+      "接口清单",
+      "数据表"
+    ],
+    "inputs": {
+      "summary": "新增订单查询接口，支持按时间范围过滤",
+      "chapters": [
+        "概述",
+        "接口清单",
+        "数据表"
+      ]
+    },
+    "context": {
+      "unit_id": "api-orders-query#0"
+    },
+    "feedback": [],
+    "job_id": "replay-demo"
+  },
+  "outcome": {
+    "ok": true,
+    "payload": {
+      "unit_ref": "api-orders-query#0",
+      "chapter_path": [
+        "接口清单"
+      ],
+      "reason": "描述的是接口行为，候选中只有「接口清单」承载这类内容"
+    },
+    "chosen": "接口清单",
+    "confidence": 0.88,
+    "schema_ok": true,
+    "model": "replay",
+    "tokens_in": 96,
+    "tokens_out": 31,
+    "latency_ms": 180
+  },
+  "instruction": null,
+  "intent": null
+}

@@ -1,0 +1,133 @@
+{
+  "case_source_version": "1.0.0",
+  "_note": "小模型基线评测的内置样本集（TASK-P0-17 / NFR-23）。通过率喂给 routing 的 baseline，未达阈值的决策点被强制由规则接管。样本一律用中性词——引擎与它的资产都不得携带文档类型名与领域概念名（NFR-28 / 验收 42），这条由 tests/unit/test_agents_baseline.py 守着（CI 脚本只扫 *.py，扫不到本文件）。",
+  "_shapes": {
+    "dedup.semantic_duplicate": "inputs: {left, right} —— 两段待判的条目描述",
+    "placement.section_slot": "inputs: {summary, chapters: [...]}；candidates 同 chapters",
+    "convention.advisory": "inputs: {finding_ref, detail}",
+    "copy.generate": "inputs: {unit_id, text}",
+    "review.document": "inputs: {unit_id, text}"
+  },
+  "cases": [
+    {
+      "case_id": "dedup-synonym",
+      "decision_point": "dedup.semantic_duplicate",
+      "target": "a-synonym",
+      "candidates": ["重复", "不重复"],
+      "inputs": {
+        "left": "同一术语的写法在正文与标题中不一致",
+        "right": "同一术语在正文和标题里的写法有出入"
+      },
+      "expect": { "is_duplicate": true },
+      "note": "两句只在用词上有别（不一致 / 有出入），所指是同一件事 ⇒ 应判重复。判不出的代价是把同一件事写两遍。（原先用的是「取值方式 / 赋值方式」——取值与赋值本就可以是两件事，那条期望站不住：模型的「不重复」未必错，却会算成它的错。）"
+    },
+    {
+      "case_id": "dedup-similar-but-distinct",
+      "decision_point": "dedup.semantic_duplicate",
+      "target": "a-distinct",
+      "candidates": ["重复", "不重复"],
+      "inputs": {
+        "left": "条目 A 的可取范围",
+        "right": "条目 B 的可取范围"
+      },
+      "expect": { "is_duplicate": false },
+      "note": "结构相同、对象不同 ⇒ 应判不重复。这里是判重的反向陷阱：只看句式会误判重复。"
+    },
+    {
+      "case_id": "placement-by-topic",
+      "decision_point": "placement.section_slot",
+      "target": "u-access",
+      "candidates": ["接入说明", "权限说明", "错误处理"],
+      "inputs": {
+        "summary": "客户端如何取得访问凭据并完成首次调用",
+        "chapters": ["接入说明", "权限说明", "错误处理"]
+      },
+      "expect": { "chapter_path": ["接入说明"] },
+      "note": "落位必须在候选章节内（不得创造章节）；这条考的就是候选内选择。"
+    },
+    {
+      "case_id": "placement-by-topic-errors",
+      "decision_point": "placement.section_slot",
+      "target": "u-errors",
+      "candidates": ["接入说明", "权限说明", "错误处理"],
+      "inputs": {
+        "summary": "各类失败情形的错误码清单与处置建议",
+        "chapters": ["接入说明", "权限说明", "错误处理"]
+      },
+      "expect": { "chapter_path": ["错误处理"] },
+      "note": "与上一条同候选集、不同内容 ⇒ 一起看才能区分\"真在选\"与\"总选第一个\"。"
+    },
+    {
+      "case_id": "advisory-keeps-finding-ref",
+      "decision_point": "convention.advisory",
+      "target": "F-001",
+      "candidates": ["接受建议", "维持现状"],
+      "inputs": {
+        "finding_ref": "F-001",
+        "detail": "同一术语在正文与标题中的写法不一致"
+      },
+      "expect": { "finding_ref": "F-001" },
+      "note": "只断言引用未被编造：建议内容是自由文本，不判措辞；但 finding_ref 必须原样回带（否则建议挂不到那条 Finding 上）。"
+    },
+    {
+      "case_id": "advisory-keeps-finding-ref-2",
+      "decision_point": "convention.advisory",
+      "target": "F-002",
+      "candidates": ["接受建议", "维持现状"],
+      "inputs": {
+        "finding_ref": "F-002",
+        "detail": "同一编号在不同章节重复出现"
+      },
+      "expect": { "finding_ref": "F-002" },
+      "note": "换一个引用再测一次：编造引用往往是\"总是编同一个\"或\"照抄不换\"，单条样本区分不出来。"
+    },
+    {
+      "case_id": "copy-keeps-unit-id",
+      "decision_point": "copy.generate",
+      "target": "u-copy-1",
+      "candidates": [],
+      "inputs": {
+        "unit_id": "u-copy-1",
+        "text": "该选项用于控制请求的超时时间。"
+      },
+      "expect": { "unit_id": "u-copy-1" },
+      "note": "改写点只断言作用对象：文案质量由人看，而\"改的是哪一段\"必须可对账。"
+    },
+    {
+      "case_id": "copy-keeps-unit-id-2",
+      "decision_point": "copy.generate",
+      "target": "u-copy-2",
+      "candidates": [],
+      "inputs": {
+        "unit_id": "u-copy-2",
+        "text": "该选项留空时使用默认值。"
+      },
+      "expect": { "unit_id": "u-copy-2" },
+      "note": "同上，第二条用来发现\"id 照抄第一条\"。"
+    },
+    {
+      "case_id": "review-detects-missing",
+      "decision_point": "review.document",
+      "target": "u-review-1",
+      "candidates": ["missing", "weak", "contradictory"],
+      "inputs": {
+        "unit_id": "u-review-1",
+        "text": "本节内容详见下表。"
+      },
+      "expect": { "kind": "missing" },
+      "note": "整个正文只有一句悬空引用、没有任何实质内容（也没有表）⇒ 缺失。判据是「正文没有内容」而不是「内容偏薄」，故不该判成 weak——原先的样本写的是「本章说明……可选范围。可选范围见下表。」，那个「缺失 / 偏薄」的界线本身可争，模型的「weak」未必错。"
+    },
+    {
+      "case_id": "review-detects-contradiction",
+      "decision_point": "review.document",
+      "target": "u-review-2",
+      "candidates": ["missing", "weak", "contradictory"],
+      "inputs": {
+        "unit_id": "u-review-2",
+        "text": "该选项为必填项。该选项可省略，省略时使用默认值。"
+      },
+      "expect": { "kind": "contradictory" },
+      "note": "同一条目内前句说必填、后句说可省略 ⇒ 矛盾。与上一条一起看，才能区分\"真在判\"与\"总选第一个\"。"
+    }
+  ]
+}

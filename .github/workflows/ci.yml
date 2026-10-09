@@ -1,0 +1,235 @@
+name: ci
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  PYTHONUTF8: "1"
+  DOCFIDELITY_MODEL_ENABLED: "false"
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  gates:
+    name: 架构门禁
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: 安装内核与开发工具
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+          python -m pip check
+      - run: lint-imports --verbose
+      - run: python scripts/check_forbidden_words.py
+      - run: python scripts/check_line_limit.py
+      - run: python scripts/check_kernel_no_web.py
+
+  lint:
+    name: Lint / Type
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: 安装开发与服务端类型依赖
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev,server]"
+          python -m pip check
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy src/docfidelity server
+
+  core:
+    name: 纯内核（${{ matrix.os }} / py${{ matrix.python-version }}）
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.10", "3.11", "3.12"]
+        include:
+          - os: windows-latest
+            python-version: "3.12"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: 仅安装基础运行依赖与开发工具
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+          python -m pip check
+      - name: 验证安装未引入 Web、数据库或模型 SDK
+        run: |
+          python - <<'PY'
+          from importlib.util import find_spec
+
+          optional = (
+              "fastapi", "starlette", "uvicorn", "sqlalchemy", "alembic",
+              "sse_starlette", "pydantic_settings", "mcp", "agents", "openai",
+          )
+          present = [name for name in optional if find_spec(name) is not None]
+          assert not present, f"基础安装引入了可选依赖：{present}"
+          PY
+      - name: 内核单元测试
+        run: pytest tests/unit -m unit --cov=docfidelity --cov-report=term-missing
+
+  test:
+    name: 全量测试（${{ matrix.os }} / py${{ matrix.python-version }}）
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.10", "3.11", "3.12"]
+        include:
+          - os: windows-latest
+            python-version: "3.12"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: 安装全量测试依赖
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev,server,model]"
+          python -m pip check
+      - run: pytest -m "not e2e"
+
+  web:
+    name: 前端与生成契约
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: python -m pip install -e ".[dev,server]"
+      - run: npm ci --no-audit --no-fund
+        working-directory: web
+      - run: python scripts/export_schemas.py --check
+      # dump_openapi.py 没有只读检查模式，生成后的差异就是契约漂移。
+      - name: 校验 OpenAPI 与前端类型同步
+        run: |
+          python scripts/dump_openapi.py
+          npm --prefix web run gen:api
+          git diff --exit-code -- web/openapi.json web/src/api/schema.d.ts
+      - run: npm run build
+        working-directory: web
+      - run: npm test
+        working-directory: web
+
+  packaging:
+    name: 分发包与独立安装
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: python -m pip install --upgrade build twine
+      # 默认从 sdist 构建 wheel，同时验证源码包能独立用于构建。
+      - run: python -m build
+      - run: python -m twine check --strict dist/*
+      - name: 在全新环境安装 wheel
+        run: |
+          python -m venv "$RUNNER_TEMP/wheel-venv"
+          "$RUNNER_TEMP/wheel-venv/bin/python" -m pip install "$GITHUB_WORKSPACE"/dist/*.whl
+          "$RUNNER_TEMP/wheel-venv/bin/python" -m pip check
+      - name: 离开源码目录验证入口与内置资产
+        working-directory: ${{ runner.temp }}
+        run: |
+          "$RUNNER_TEMP/wheel-venv/bin/docfidelity" stages
+          "$RUNNER_TEMP/wheel-venv/bin/python" -I - <<'PY'
+          from importlib.metadata import entry_points
+          from importlib.util import find_spec
+
+          from docfidelity.agents.baseline import default_cases
+          from docfidelity.qa.engine import BUILTIN_RULE_FILE
+          from docfidelity.qa.type_agnostic import load_wordlist
+
+          assert BUILTIN_RULE_FILE.is_file()
+          assert load_wordlist()
+          assert default_cases()
+          providers = entry_points(group="docfidelity.build_stages")
+          assert any(provider.name == "reference" for provider in providers)
+          for name in ("fastapi", "starlette", "uvicorn", "sqlalchemy", "mcp", "agents"):
+              assert find_spec(name) is None, name
+          PY
+
+  docker:
+    name: 容器首启与独立 worker 构建
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      COMPOSE_PROJECT_NAME: docfidelity-ci-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: 构建本地镜像
+        run: docker compose -f deploy/compose.yml build
+      - name: 使用全新命名卷启动 API 与 worker
+        run: docker compose -f deploy/compose.yml up --detach --no-build --wait --wait-timeout 120
+      - name: 验证就绪、前端与首启装载
+        run: |
+          curl --fail --silent --show-error http://127.0.0.1:8000/readyz
+          curl --fail --silent --show-error --output "$RUNNER_TEMP/index.html" http://127.0.0.1:8000/
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from urllib.request import urlopen
+
+          with urlopen("http://127.0.0.1:8000/health", timeout=5) as response:
+              health = json.load(response)
+          assert health["build_ready"], health
+          assert health["model_enabled"] is False, health
+          seed = health["demo_seed"]
+          assert seed and not seed["skipped"] and not seed["errors"], seed
+          assert len(seed["seeded"]) == 2, seed
+          assert '<div id="root">' in Path(os.environ["RUNNER_TEMP"], "index.html").read_text()
+          PY
+      - name: 验证非 root 进程可写数据卷
+        run: |
+          docker compose -f deploy/compose.yml exec -T df-api python -c "import os; from pathlib import Path; assert os.getuid() == 10001; assert Path('/data/df.db').is_file(); marker = Path('/data/.ci-write'); marker.write_text('ok'); marker.unlink()"
+      - name: 验证演示构建、事件补推、报告与 DOCX 下载
+        run: python scripts/smoke_deployment.py --timeout 180
+      - name: 输出容器状态与日志
+        if: always()
+        run: |
+          docker compose -f deploy/compose.yml ps --all
+          docker compose -f deploy/compose.yml logs --no-color
+      - name: 清理容器与临时数据卷
+        if: always()
+        run: docker compose -f deploy/compose.yml down --volumes --remove-orphans

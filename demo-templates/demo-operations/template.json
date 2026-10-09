@@ -1,0 +1,24 @@
+{
+  "template_id": "demo-operations",
+  "version": "1",
+  "doc_type": "operations-procedure",
+  "notes": "自制示例模板：非软件域（作业规程 / 评估报告：步骤、阈值、签核栏）",
+  "source": "template.docx",
+  "package": "package",
+  "covers": [
+    "多级标题 + 自动编号",
+    "封面 + 修订记录 + 页眉页脚",
+    "多种表格原型（含合并单元格、跨行跨列）",
+    "目录域 + 页码 + 分节",
+    "带编写说明的占位内容",
+    "列表段落原型（项目符号）",
+    "冗余模块（参考资料）"
+  ],
+  "gaps": [
+    {
+      "item": "跨模板组合（封面取 A、修订表取 B）",
+      "reason": "render 层未实现 BlockEntry.cross_template_ref：注入只认工作副本这一个包，档案的 bindings.template_packages 目前只用于登记期引用校验"
+    }
+  ],
+  "ingest_findings": 1
+}

@@ -1,0 +1,23 @@
+name: 功能建议
+description: 说明实际需求、预期行为与可考虑的替代方案。
+title: "[Feature] "
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: 使用场景与问题
+      description: 描述谁在什么流程中遇到什么限制，使用自造或脱敏示例。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 期望的行为
+      description: 描述可观察的结果。涉及新文档类型时，说明是否可以通过外部档案配置实现。
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 替代方案与相关需求
+      description: 可提供现有配置方案、取舍或对应的需求 / ADR 编号。
