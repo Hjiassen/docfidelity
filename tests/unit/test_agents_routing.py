@@ -355,7 +355,7 @@ def test_optional_point_without_fallback_pending_stays_auto() -> None:
 def test_unscripted_point_degrades_rather_than_raises() -> None:
     """回放器没覆盖该点 → 仍走降级路径，**构建不失败**（需求 5.2.4 硬约束 1）。"""
     ctx = _ctx(build_routing(), ScriptedAdapter(script={}))
-    outcome = dispatch("placement.section_slot", {}, ctx, target="s1")
+    outcome = dispatch("placement.section_slot", {}, ctx, target="s1", candidates=["s1"])
     assert outcome.source == "fallback"
     assert outcome.pending is True
 
@@ -475,16 +475,16 @@ def test_missing_confidence_is_treated_as_not_met() -> None:
     assert ctx.recorder.silent_adoptions() == ()
 
 
-def test_missing_confidence_on_optional_point_falls_back_without_new_pending() -> None:
-    """无置信度也不能采用可选文案；是否待确认仍依决策点的回退声明。"""
+def test_missing_confidence_on_optional_point_falls_back_with_pending() -> None:
+    """缺失置信度必须待确认，不能因可选文案的回退声明而静默略过。"""
     adapter = ScriptedAdapter(script={"copy.generate": _outcome(chosen="rewrite", confidence=None)})
     ctx = _ctx(build_routing(), adapter)
     outcome = dispatch("copy.generate", {}, ctx, target="p1")
     assert outcome.source == "fallback"
     assert outcome.effective == "rule"
-    assert outcome.pending is False
+    assert outcome.pending is True
     assert len(adapter.calls) == DEFAULT_MAX_RETRIES + 1
-    assert ctx.recorder.pending_decisions() == ()
+    assert len(ctx.recorder.pending_decisions()) == 1
 
 
 def test_schema_failure_retries_with_schema_hint() -> None:
@@ -512,7 +512,7 @@ def test_failed_call_is_recorded_with_fallback_flag() -> None:
         }
     )
     ctx = _ctx(build_routing(), adapter, job_id="job-9")
-    outcome = dispatch("placement.section_slot", {}, ctx, target="s1")
+    outcome = dispatch("placement.section_slot", {}, ctx, target="s1", candidates=["s1"])
     calls = ctx.recorder.model_calls
     assert len(calls) == 1
     assert calls[0].ok is False

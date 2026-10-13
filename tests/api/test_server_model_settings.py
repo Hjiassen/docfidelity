@@ -56,7 +56,11 @@ def test_api_settings_update_reaches_a_separate_worker_through_the_submitted_job
             model_name=model,
             script={
                 "placement.section_slot": AdapterOutcome(
-                    ok=True, confidence=0.99, model=model, chosen=chosen
+                    ok=True,
+                    confidence=0.99,
+                    model=model,
+                    chosen=chosen,
+                    payload={"unit_ref": "worker-unit", "chapter_path": [chosen]},
                 )
             },
         )
@@ -108,7 +112,12 @@ def test_api_settings_update_reaches_a_separate_worker_through_the_submitted_job
             described = session.adapter_description()
             assert described["model"] == expected
             assert described["available"] is (expected is not None)
-            decision = session.decide("placement.section_slot")
+            decision = session.decide(
+                "placement.section_slot",
+                {"unit_ref": "worker-unit", "chapters": ["worker-local"]},
+                target="worker-unit",
+                candidates=["worker-local"],
+            )
             if expected is not None:
                 assert decision.source == "model" and decision.chosen == "worker-local"
             else:

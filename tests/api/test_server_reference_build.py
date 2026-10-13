@@ -324,6 +324,60 @@ def test_the_chain_still_delivers_with_the_model_switch_off(
         assert package.read("word/document.xml")
 
 
+@pytest.mark.parametrize("mode", ["admitted", "disabled", "failed"])
+def test_default_build_carries_semantic_decisions_to_ir_docx_and_report(
+    harness: Harness, template_docx: Path, monkeypatch: pytest.MonkeyPatch, mode: str
+) -> None:
+    from docfidelity.agents import ScriptedAdapter
+    from docfidelity.pipeline import build_session
+    from tests.unit.test_builder_decisions import PlacementAdapter
+
+    project_id = _project(harness, template_docx, source_ids=["orders-src"])
+    _add_source(harness, project_id, harness.root)
+    profile = api_profile()
+    profile.profile_id = "semantic-profile"
+    profile.bindings = Bindings(template_packages=[DEMO_TEMPLATE_REF])
+    profile.projections[0].slot = None
+    harness.services.register_profile(
+        document=profile,
+        author="e2e",
+        known_template_refs=[DEMO_TEMPLATE_REF],
+        domain_models=harness.services.domain_declarations(),
+    )
+    config = harness.services.get_config(project_id)
+    config.documents[0].profile_id = profile.profile_id
+    harness.services.put_config(project_id, config, author="e2e")
+    adapter = PlacementAdapter() if mode != "failed" else ScriptedAdapter()
+
+    def factory(job, routing, events):
+        return build_session(
+            routing,
+            job_id=job.job_id,
+            events=events,
+            adapter=adapter,
+            model_enabled=mode != "disabled",
+            max_retries=0,
+            baseline={"placement.section_slot": 1.0},
+        )
+
+    monkeypatch.setattr(harness.runner, "_decide_session", factory)
+    child, job_dir = _submit(harness, project_id, source_ids=["orders-src"])
+    assert harness.repository.get_job(child).status == (
+        "succeeded" if mode == "admitted" else "awaiting_decision"
+    )
+    ir = json.loads((job_dir / "work/ir.json").read_text(encoding="utf-8"))
+    assert ir["units"][0]["children"]
+    report = json.loads((job_dir / "work/report.json").read_text(encoding="utf-8"))
+    assert len(report["decisions"]) == 2
+    assert len(report["model_calls"]) == (0 if mode == "disabled" else 2)
+    assert all(
+        item["status"] == ("auto" if mode == "admitted" else "pending")
+        for item in report["decisions"]
+    )
+    with zipfile.ZipFile(next((job_dir / "artifacts").glob("*.docx"))) as package:
+        assert "创建订单" in package.read("word/document.xml").decode("utf-8")
+
+
 def test_probe_and_build_resolve_the_source_root_the_same_way(
     harness: Harness, template_docx: Path
 ) -> None:

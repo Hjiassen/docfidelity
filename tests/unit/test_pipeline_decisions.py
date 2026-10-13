@@ -1,16 +1,7 @@
 """``pipeline.decisions``：决策接缝——会话、留痕落点、阶段上下文与汇总。
 
-这一轮的判据是「决策可路由」，而接缝要证明的只有一件事：**编排与 Phase 之间的那条
-链路是通的，且默认状态下不越界**。故用例集中在四个可被反例击穿的地方：
-
-1. **规则点绝不问模型**。写成"配置里没写就默认问一下"的话，那张分级表就退化了；
-   对应用例断言适配层**一次都没被调用**，而不是"结论反正也是规则值"。
-2. **模型不可用 / 低置信不静默采用**（验收 39）。断言的是 ``source`` / ``effective``
-   这两个字段本身——只断言"最终取值等于规则默认值"是拦不住的：静默采用时它也可能
-   恰好等于默认值。
-3. **留痕一定落成事件**。落不了事件的决策，在 SSE 流、断线重连、重启回放里都不存在。
-4. **失败优先于待裁决**。阶段既产生了待裁决项又失败了，作业必须是 ``failed``——
-   顺序写反会得到一个"等人裁决"的失败作业，而它根本没有产物可裁决。
+覆盖规则点零模型调用、失败与低置信不静默采用、事件留痕、失败优先于待裁决。
+模型行为断言来源与实际调用，不以结果值恰好相同代替路由验证。
 """
 
 from __future__ import annotations
@@ -67,7 +58,7 @@ def _answer(
     return AdapterOutcome(
         ok=ok,
         schema_ok=schema_ok,
-        payload={"choice": chosen} if ok else None,
+        payload={"unit_ref": "sec-1", "chapter_path": [chosen]} if ok else None,
         chosen=chosen if ok else None,
         confidence=confidence,
         model="m-test",
@@ -140,7 +131,7 @@ class TestJournalRecorder:
         log = EventLog()
         adapter = _scripted(**{MODEL_POINT: _answer()})
         session = build_session(None, job_id="j1", events=log, adapter=adapter)
-        session.decide(MODEL_POINT, {})
+        session.decide(MODEL_POINT, {}, target="sec-1", candidates=["选项甲"])
 
         kinds = [event.payload["record"] for event in log.events("j1")]
         assert kinds == [RECORD_DECISION, RECORD_MODEL_CALL]
@@ -225,7 +216,7 @@ class TestDecisionSession:
         后者会让运维去查模型服务，而真相是这个进程压根没打算问它。
         """
         session = build_session(None, job_id="j1", adapter=ScriptedAdapter(available_flag=False))
-        outcome = session.decide(MODEL_POINT, {}, target="sec-1")
+        outcome = session.decide(MODEL_POINT, {}, target="sec-1", candidates=["选项甲"])
 
         assert (outcome.declared, outcome.effective) == ("small_model", "rule")
         assert outcome.source == "fallback"
@@ -256,7 +247,7 @@ class TestDecisionSession:
         """低置信 ⇒ 带上次失败原因重试到预算用尽，仍不达标就进裁决队列。"""
         adapter = _scripted(**{MODEL_POINT: _answer(confidence=0.2)})
         session = build_session(None, job_id="j1", adapter=adapter)
-        outcome = session.decide(MODEL_POINT, {})
+        outcome = session.decide(MODEL_POINT, {}, target="sec-1", candidates=["选项甲"])
 
         assert outcome.status == "pending"
         assert outcome.fallback_used is True
@@ -270,7 +261,7 @@ class TestDecisionSession:
         """模型没报置信度一律按不达标处理——把"没说"当成"很有把握"正是静默采用的入口。"""
         adapter = _scripted(**{MODEL_POINT: _answer(confidence=None)})
         session = build_session(None, job_id="j1", adapter=adapter)
-        outcome = session.decide(MODEL_POINT, {})
+        outcome = session.decide(MODEL_POINT, {}, target="sec-1", candidates=["选项甲"])
 
         assert outcome.source == "fallback"
         assert outcome.status == "pending"
@@ -280,7 +271,7 @@ class TestDecisionSession:
         """格式不合法与置信度不足是两件事：前者重试有意义，故必须也走重试。"""
         adapter = _scripted(**{MODEL_POINT: _schema_broken()})
         session = build_session(None, job_id="j1", adapter=adapter)
-        outcome = session.decide(MODEL_POINT, {})
+        outcome = session.decide(MODEL_POINT, {}, target="sec-1", candidates=["选项甲"])
 
         assert len(adapter.calls) == 3
         assert "Schema" in adapter.calls[1].feedback[0]
@@ -439,13 +430,22 @@ class TestBaselineWiring:
         cases_digest: str | None = None,
         routing_digest: str | None = None,
         routing: RoutingConfig | None = None,
+        endpoint_fingerprint: str | None = None,
     ) -> Path:
-        from docfidelity.agents.baseline import BaselineReport, default_cases, save_report
+        from docfidelity.agents.baseline import (
+            BaselineReport,
+            default_cases,
+            endpoint_digest,
+            save_report,
+        )
         from docfidelity.agents.routing import build_routing
         from docfidelity.platform.hashing import digest_payload
 
         report = BaselineReport(
             model=model,
+            endpoint_digest=endpoint_digest("http://127.0.0.1:9/v1")
+            if endpoint_fingerprint is None
+            else endpoint_fingerprint,
             cases_digest=cases_digest
             if cases_digest is not None
             else digest_payload([case.model_dump(mode="json") for case in default_cases()]),
@@ -684,7 +684,11 @@ class TestStageWiring:
         )
 
         assert len(session.decisions()) == 1
-        assert [event.type for event in log.events("j-doc-1")] == [DECISION_EVENT_TYPE]
+        assert all(event.type == DECISION_EVENT_TYPE for event in log.events("j-doc-1"))
+        assert [event.payload["record"] for event in log.events("j-doc-1")] == [
+            "stage_start",
+            RECORD_DECISION,
+        ]
 
 
 class TestDocumentRun:
@@ -782,6 +786,10 @@ class TestDocumentRun:
             now=clock,
         )
 
-        decisions = [event for event in log.events("j-doc-1") if event.type == DECISION_EVENT_TYPE]
+        decisions = [
+            event
+            for event in log.events("j-doc-1")
+            if event.type == DECISION_EVENT_TYPE and event.payload.get("record") == RECORD_DECISION
+        ]
         assert len(decisions) == 1
         assert decisions[0].payload["kind"] == MODEL_POINT

@@ -951,14 +951,15 @@ export const zh = {
     baselineNotLoaded: "未加载",
     baselinePath: "报告路径",
     baselineModel: "评测模型",
+    baselineEndpoint: "端点指纹",
     baselineDigest: "样本指纹",
     baselinePosture: "评测姿态指纹",
     baselineByPoint: "逐决策点通过率",
     baselineByPointNote:
-      "通过率是「在这个姿态下能不能驱动」，达标与否由路由层按各决策点声明的阈值判定。换个门槛跑出的通过率不可比，故上面连姿态指纹一起给出（缺省门槛 0.7 之下，不报置信度的端点会把每个点都判成不达标）。",
+      "通过率与评测模型、端点及路由姿态绑定。服务端按各决策点的基线阈值判定，未达标或未覆盖时回退规则并标记待确认。",
     baselineUncovered: "模型档中未被评测覆盖的决策点",
     baselineUncoveredNone: "模型档决策点均已覆盖。",
-    baselineUncoveredNote: "未覆盖不等于已验证：这些点没有样本，路由按目录声明的归属放行。",
+    baselineUncoveredNote: "这些决策点没有评测样本，将回退规则并标记待确认。",
     baselineFailures: "失败原因",
     baselineNoFailures: "没有失败样例。",
 
@@ -1296,6 +1297,7 @@ export const zh = {
     decisionStrategy: "采用策略",
     decisionLevel: "等级",
     decisionThreshold: "置信阈值",
+    decisionAdmissionPolicy: "准入策略",
     decisionFallback: "模型不可用时的动作",
     decisionModel: "模型",
     decisionAdd: "新增决策点",
@@ -1318,7 +1320,11 @@ export const zh = {
       model_then_rule: "先模型后规则",
     },
     levelOf: { auto: "自动", confirm: "需确认", manual: "需人工" },
-    thresholdNote: "留空用引擎默认 0.7。低于阈值不得自动采用，必须进裁决队列。",
+    admissionPolicyOf: {
+      require_confidence: "真实置信度",
+      independent_validation: "独立约束校验",
+    },
+    thresholdNote: "置信度准入策略下，阈值留空用引擎默认 0.7，低于阈值进裁决队列。",
 
     /* 区域 7 */
     secVersions: "变更留痕",

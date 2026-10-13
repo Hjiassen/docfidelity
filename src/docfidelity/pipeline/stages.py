@@ -502,6 +502,7 @@ def run_stage(
             finished_at=clock(),
         )
 
+    session.begin_stage(stage)
     context = StageContext(
         job=job,
         stage=stage,

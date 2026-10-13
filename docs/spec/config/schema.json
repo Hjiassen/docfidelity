@@ -62,6 +62,16 @@
       "additionalProperties": false,
       "description": "单个决策点的路由配置。\n\n``route`` 为 ``None`` 表示\"由引擎内置的默认路由表决定\"——默认表逐点对应需求 5.2.3\n的分级表，故\"未显式声明\"不等于\"没有归属\"，但配置一旦写了就以配置为准。\n\n``level`` / ``strategy`` / ``confidence_threshold`` 三个字段**同样以 ``None`` 表示\n\"由归属决定\"**。它们不能带非空默认值：配置项里最常写的只有 ``model``（换一个模型），\n若其余字段带默认值，那么\"只换了模型标识\"会顺带把 ``level`` 从 ``confirm`` 压回\n``auto``、把 ``strategy`` 从 ``rule_only`` 换成 ``rule_then_model``——\n而这两处行为改变在配置文本里**完全看不出来**。",
       "properties": {
+        "admission_policy": {
+          "default": "require_confidence",
+          "description": "模型准入依据：真实置信度 / 独立约束校验；独立校验仅支持章节放置，仍需同策略基线达标",
+          "enum": [
+            "require_confidence",
+            "independent_validation"
+          ],
+          "title": "Admission Policy",
+          "type": "string"
+        },
         "confidence_threshold": {
           "anyOf": [
             {

@@ -222,7 +222,16 @@ def test_awaiting_decision_worker_exit_can_finish_publication_without_reasking_d
     assert outcome.ran == ()
     assert all(stages.resolve(stage).call_count == 0 for stage in stages.registered())
     events = restarted.runner.events.events(child_id)
-    assert len([event for event in events if event.type == "decision"]) == 1
+    assert (
+        len(
+            [
+                event
+                for event in events
+                if event.type == "decision" and event.payload.get("record") == "decision"
+            ]
+        )
+        == 1
+    )
     assert events[-1].payload == {"status": "awaiting_decision", "execution_active": False}
     assert not job_stream_settled(restarted.runner.events, restarted.services.get_job(child_id))
     assert restarted.runner.run_once() is None

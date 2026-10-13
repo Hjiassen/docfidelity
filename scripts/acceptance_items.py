@@ -383,9 +383,9 @@ ITEMS: Final[tuple[Item, ...]] = (
         37,
         "配置模型主流程与基线",
         "当前配置模型在发行默认阶段实际触发至少一个达标决策点；拟接管点均有匹配且达标的逐点真实基线，其余走规则；不限定参数量、量化或部署位置",
-        "当前配置模型已实测；默认阶段集成与缺置信度准入仍缺，见 docs/验收/P0-验收自检.md",
+        "2026-10-13当前模型落位基线10/10、默认阶段5次真实采用；人工证据见 docs/验收/P0-验收自检.md",
         "manual",
-        "使用当前.env模型补齐默认阶段调用、决策、产物与逐点基线证据；当前默认基线0/10、默认阶段0调用仍未达标；辅助阶段与仅将阈值置0不能替代",
+        "审核R1/R2忽略工作区中的默认阶段调用、IR、DOCX、报告及模型/端点/样本/策略指纹；其余点维持规则回退；文件存在与阈值置0不能代替人工审核",
     ),
     Item(
         38,
@@ -399,9 +399,9 @@ ITEMS: Final[tuple[Item, ...]] = (
         39,
         "降级路径可验证",
         "断开模型后全链路退化且产出合规；缺置信度/低置信与失败项默认进裁决队列，无静默采用；替代准入须显式配置、留存依据并真实评测",
-        "tests/unit/test_agents_routing.py、tests/api/test_server_decisions.py",
+        "test_agents_routing.py、test_agents_admission.py、test_builder_decisions.py、test_server_reference_build.py",
         "suite",
-        "tests/unit/test_agents_routing.py tests/api/test_server_decisions.py",
+        "tests/unit/test_agents_routing.py tests/unit/test_agents_admission.py tests/unit/test_builder_decisions.py tests/unit/test_pipeline_decision_resume.py tests/api/test_server_decisions.py tests/api/test_server_reference_build.py tests/api/test_server_adjudication.py",
     ),
     Item(
         40,

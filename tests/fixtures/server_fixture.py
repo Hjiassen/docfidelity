@@ -245,6 +245,8 @@ class ArtifactStage:
     #: 非 ``None`` 时本阶段**先做一次**该决策点的决策（验证决策接缝）。
     decide_point: str | None = None
     decide_target: str = ""
+    decide_candidates: tuple[str, ...] = ()
+    decide_inputs: dict[str, Any] = field(default_factory=dict)
     calls: list[StageContext] = field(default_factory=list)
     decisions: list[DecisionOutcome] = field(default_factory=list)
 
@@ -258,7 +260,12 @@ class ArtifactStage:
             # 决策排在失败判定**之前**：决策已经发生了，阶段随后可能失败。
             # 顺序反过来时"有待裁决项但作业仍应判 failed"就验不到——那正是失败优先的情形。
             self.decisions.append(
-                context.decide(self.decide_point, {"stage": self.name}, target=self.decide_target)
+                context.decide(
+                    self.decide_point,
+                    {"stage": self.name, **self.decide_inputs},
+                    target=self.decide_target,
+                    candidates=self.decide_candidates,
+                )
             )
         if self.raises is not None:
             raise self.raises

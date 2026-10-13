@@ -551,6 +551,7 @@ export type TerminologyScope = NonNullable<Terminology["scope"]>;
 export type DecisionRoute = NonNullable<DecisionPointRoute["route"]>;
 export type DecisionStrategy = NonNullable<DecisionPointRoute["strategy"]>;
 export type DecisionLevel = NonNullable<DecisionPointRoute["level"]>;
+export type DecisionAdmissionPolicy = DecisionPointRoute["admission_policy"];
 
 /* ------------------------------------------------------------------ 联合类型
  * 单独取出来是为了让 `switch` 能穷尽检查：漏一个状态时 TS 会报错，

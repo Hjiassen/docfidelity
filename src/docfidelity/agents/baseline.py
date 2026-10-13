@@ -18,10 +18,9 @@
    把不可靠的点标成可靠——那才是真的放行。
 3. **报告带样本集指纹**。换一批样本跑出的通过率与旧报告不可比；不记指纹的话，
    "某点通过率 0.88 达标"这句话在样本换过之后仍然成立，而它已经不成立了。
-4. **报告还要带"姿态"指纹**（``routing_digest``，本轮的补丁）。通过率是"在这个门槛下
-   能不能驱动"，门槛就是结论的一部分：同一批样本、同一个模型，在缺省门槛 0.7 下跑出
-   全 0（网关不报置信度 ⇒ 全部判不达标），在门槛 0 下跑出 7/10。少了这一栏，
-   两次结果看起来是"模型变强了"，而不是"评测换了个姿态"。
+4. **报告带路由策略和端点指纹**。缺失置信度不能用门槛归零绕过；章节放置可显式采用
+   独立安全约束校验，其语义正确性仍由样本期望判分。生产必须核对同一模型、端点、
+   样本与准入策略，才能复用报告中的通过率。
 
 评测**不带** baseline 跑自己
 ----------------------------
@@ -61,6 +60,7 @@ __all__ = [
     "cases_from_payload",
     "cases_to_payload",
     "default_cases",
+    "endpoint_digest",
     "load_status",
     "report_to_payload",
     "run_baseline",
@@ -131,6 +131,12 @@ class CaseOutcome(FormatModel):
     expected: dict[str, Any] = Field(default_factory=dict)
     reason: str = ""
     attempts: int = 0
+    confidence: float | None = None
+    admission_evidence: dict[str, Any] = Field(default_factory=dict)
+    fallback_used: bool = False
+    missing_confidence_count: int = 0
+    tokens_in: int = 0
+    tokens_out: int = 0
 
 
 class BaselineReport(FormatModel):
@@ -142,6 +148,7 @@ class BaselineReport(FormatModel):
     """
 
     model: str = Field(description="被测模型标识；换模型即换了一份证据")
+    endpoint_digest: str = Field(default="", description="部署端点的不可逆指纹；换端点即换证据")
     cases_digest: str = Field(description="样本集指纹；样本变了则本报告不可比")
     routing_digest: str = Field(
         default="",
@@ -151,6 +158,13 @@ class BaselineReport(FormatModel):
     total: int = 0
     passed: int = 0
     pass_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    accuracy: float = Field(default=0.0, ge=0.0, le=1.0, description="被采纳回答中的语义正确率")
+    fallback_count: int = Field(default=0, ge=0)
+    missing_confidence_count: int = Field(
+        default=0, ge=0, description="未提供置信度的调用次数，含重试"
+    )
+    tokens_in: int = Field(default=0, ge=0, description="全部尝试累计输入 token")
+    tokens_out: int = Field(default=0, ge=0, description="全部尝试累计输出 token")
     by_point: dict[str, float] = Field(default_factory=dict)
     uncovered: list[str] = Field(
         default_factory=list,
@@ -220,6 +234,7 @@ class BaselineStatus(FormatModel):
     loaded: bool = False
     problem: str = Field(default="", description="未加载的**原文原因**（服务端措辞）")
     model: str = ""
+    endpoint_digest: str = ""
     cases_digest: str = ""
     routing_digest: str = Field(
         default="", description="评测时的路由姿态指纹；与 by_point 一起看才不会被误读"
@@ -263,6 +278,7 @@ def run_baseline(
     *,
     adapter: Any,
     model: str = "",
+    endpoint_digest: str = "",
     max_retries: int = DEFAULT_MAX_RETRIES,
     config: RoutingConfig | None = None,
 ) -> BaselineReport:
@@ -273,11 +289,9 @@ def run_baseline(
 
     ``config`` 是评测时的**姿态**（按配置解析出的路由表），缺省为不覆盖任何点。
     为什么要收这个参数：通过率是"在这个门槛下能不能驱动"的结论，门槛本身就是结论的
-    一部分。默认门槛 0.7 之下，一个**不报置信度**的网关（OpenAI 兼容网关普遍如此）
-    会让每个点都判"不达标"——那测出来的是"这个网关不给置信度"，不是"模型行不行"。
-    拿它去校准分级，会把五个点全部误判为不可驱动。故评测必须能在**与部署相同**的
-    姿态下跑；这次用的姿态指纹进报告的 ``routing_digest``，与 ``cases_digest``
-    同一个道理（换过样本的通过率不可比，换过姿态的同样不可比）。
+    一部分。不报置信度的网关在默认策略下回退待确认；只有已实现独立安全校验的
+    章节放置点可以显式配置替代准入依据。评测与部署使用同一策略，策略指纹进入
+    ``routing_digest``，端点指纹进入 ``endpoint_digest``，避免复用其他姿态的结论。
     """
     _validate(cases)
     # 不传 baseline：见模块文档末段（带上的话评测会自我实现）。
@@ -312,10 +326,18 @@ def run_baseline(
                 expected=dict(case.expect),
                 reason=reason,
                 attempts=decision.attempts,
+                confidence=decision.confidence,
+                admission_evidence=dict(decision.admission_evidence),
+                fallback_used=decision.fallback_used,
+                missing_confidence_count=decision.missing_confidence_count,
+                tokens_in=decision.tokens_in,
+                tokens_out=decision.tokens_out,
             )
         )
 
-    return _report(cases, outcomes, model=model, routes=table.describe())
+    return _report(
+        cases, outcomes, model=model, endpoint_digest=endpoint_digest, routes=table.describe()
+    )
 
 
 def _report(
@@ -323,6 +345,7 @@ def _report(
     outcomes: Sequence[CaseOutcome],
     *,
     model: str,
+    endpoint_digest: str = "",
     routes: Sequence[Mapping[str, Any]] = (),
 ) -> BaselineReport:
     """按样本与逐条结果算出报告（逐点通过率在这里**只算一次**）。
@@ -338,15 +361,22 @@ def _report(
         if outcome.passed:
             passes[case.decision_point] = passes.get(case.decision_point, 0) + 1
     passed = sum(passes.values())
+    adopted = sum(outcome.adopted for outcome in outcomes)
     cases_digest, routing_digest = baseline_digests(cases, routes)
     return BaselineReport(
         model=model,
+        endpoint_digest=endpoint_digest,
         cases_digest=cases_digest,
         routing_digest=routing_digest,
         created_at=now_utc(),
         total=len(cases),
         passed=passed,
         pass_rate=0.0 if not cases else passed / len(cases),
+        accuracy=0.0 if not adopted else passed / adopted,
+        fallback_count=sum(outcome.fallback_used for outcome in outcomes),
+        missing_confidence_count=sum(outcome.missing_confidence_count for outcome in outcomes),
+        tokens_in=sum(outcome.tokens_in for outcome in outcomes),
+        tokens_out=sum(outcome.tokens_out for outcome in outcomes),
         by_point={point: passes.get(point, 0) / total for point, total in sorted(totals.items())},
         uncovered=list(uncovered_points(cases)),
         failures=_distinct_failures(outcomes),
@@ -362,6 +392,11 @@ def baseline_digests(
         digest_payload([case.model_dump(mode="json") for case in cases]),
         digest_payload(list(routes)) if routes else "",
     )
+
+
+def endpoint_digest(base_url: str) -> str:
+    """评测与生产共用端点指纹，输出不包含 URL 或密钥。"""
+    return digest_payload({"base_url": base_url.rstrip("/")})
 
 
 def _validate(cases: Sequence[BaselineCase]) -> None:
@@ -490,6 +525,7 @@ def load_status(path: str | Path) -> BaselineStatus:
         loaded=True,
         problem="",
         model=report.model,
+        endpoint_digest=report.endpoint_digest,
         cases_digest=report.cases_digest,
         routing_digest=report.routing_digest,
         by_point=report.by_point,

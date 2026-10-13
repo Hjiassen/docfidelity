@@ -360,6 +360,9 @@ function CapabilitiesCard(): ReactNode {
               <p className="small" style={{ marginTop: 0 }}>
                 <span className="muted">{zh.p13.baselineModel}：</span>
                 {data.baseline.model || zh.app.none} ·{" "}
+                <span className="muted">{zh.p13.baselineEndpoint}：</span>
+                <span className="mono small">{data.baseline.endpoint_digest?.slice(0, 12) || zh.app.none}</span>{" "}
+                ·{" "}
                 <span className="muted">{zh.p13.baselineDigest}：</span>
                 <span className="mono small">{data.baseline.cases_digest || zh.app.none}</span>{" "}
                 · <span className="muted">{zh.p13.baselinePosture}：</span>

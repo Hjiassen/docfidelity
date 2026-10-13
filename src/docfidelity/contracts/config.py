@@ -23,6 +23,8 @@ DecisionLevel = Literal["auto", "confirm", "manual"]
 
 DecisionStrategy = Literal["rule_only", "rule_then_model", "model_then_rule"]
 
+AdmissionPolicy = Literal["require_confidence", "independent_validation"]
+
 FallbackAction = Literal["rule_default", "skip", "queue"]
 
 DecisionRoute = Literal["rule", "small_model", "optional_large_model", "human"]
@@ -125,6 +127,10 @@ class DecisionPointRoute(FormatModel):
         le=1.0,
         description="低于此阈值不得自动采用，必须进裁决队列；为空用引擎默认 0.7",
     )
+    admission_policy: AdmissionPolicy = Field(
+        default="require_confidence",
+        description="模型准入依据：真实置信度 / 独立约束校验；独立校验仅支持章节放置，仍需同策略基线达标",
+    )
     fallback: FallbackAction = Field(
         default="rule_default", description="模型不可用时的动作；rule_default 保证构建不失败"
     )
@@ -213,6 +219,7 @@ class ProjectConfig(FormatModel):
 
 
 __all__ = [
+    "AdmissionPolicy",
     "DataBoundary",
     "DecisionLevel",
     "DecisionPointRoute",

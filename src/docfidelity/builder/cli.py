@@ -34,11 +34,13 @@ from typing import Any
 from docfidelity.contracts.errors import EngineError
 from docfidelity.contracts.job import STAGE_NAMES, Job
 from docfidelity.pipeline import (
+    EVENTS_FILENAME,
     STAGE_ORDER,
     EventLog,
     FileCheckpointStore,
     JsonlEventSink,
     Workspace,
+    read_events,
     run_document,
 )
 from docfidelity.platform.hashing import digest_payload
@@ -128,14 +130,19 @@ def _cmd_build(args: argparse.Namespace) -> int:
         created_at=datetime.now(tz=timezone.utc),
         inputs_hash=inputs_hash,
     )
+    workspace = Workspace(root, job_id)
+    event_path = workspace.resolve(EVENTS_FILENAME)
+    events = EventLog(JsonlEventSink(event_path))
+    if event_path.exists():
+        events.restore(job_id, read_events(event_path))
     result = run_document(
         job=job,
         registry=build_registry(),
         store=FileCheckpointStore(root),
-        workspace=Workspace(root, job_id),
+        workspace=workspace,
         inputs_hash=inputs_hash,
         payload=payload,
-        events=EventLog(JsonlEventSink(root)),
+        events=events,
     )
 
     summary = {

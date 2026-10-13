@@ -9,8 +9,8 @@
 ------------
 1. **模型不可用必须可运行**（需求 5.2.4 硬约束 1）：适配层不可用、输出不合法、
    置信度不达标，一律回退到目录声明的规则默认值并**标记待确认**，构建不因此失败。
-2. **低置信不得静默采用**（验收 39）：模型没给置信度一律按不达标处理——
-   把"没报置信度"当成"很有把握"，正是静默采用最常见的入口。
+2. **低置信不得静默采用**（验收 39）：默认准入要求真实置信度；缺失值保持 None。
+   章节放置可显式采用独立安全约束校验，但仍需要同策略的生产基线达标。
 3. **重试带失败原因**（DD-12.4）：第 2、3 次调用会把上一次的失败原因放进
    ``DecisionRequest.feedback``。不带原因的重试只是把同一个错误问三遍。
 """
@@ -25,6 +25,7 @@ from pydantic import Field
 
 from docfidelity.contracts.base import FormatModel
 from docfidelity.contracts.config import (
+    AdmissionPolicy,
     DecisionLevel,
     DecisionPointRoute,
     DecisionStrategy,
@@ -38,6 +39,7 @@ from docfidelity.contracts.job import (
     ModelCall,
 )
 
+from .admission import AdmissionResult, admit_model
 from .catalog import (
     DECISION_POINT_IDS,
     DECISION_POINTS,
@@ -110,6 +112,10 @@ class DecisionOutcome(FormatModel):
     model: str | None = None
     candidates: list[str] = Field(default_factory=list)
     output: dict[str, Any] | None = None
+    admission_evidence: dict[str, Any] = Field(default_factory=dict)
+    tokens_in: int = 0
+    tokens_out: int = 0
+    missing_confidence_count: int = 0
 
     @property
     def pending(self) -> bool:
@@ -161,6 +167,7 @@ class ResolvedRoute(FormatModel):
     level: DecisionLevel
     strategy: DecisionStrategy
     confidence_threshold: float = Field(ge=0.0, le=1.0)
+    admission_policy: AdmissionPolicy = "require_confidence"
     model: str | None = None
     enabled_by_baseline: bool = True
     baseline_pass_rate: float | None = None
@@ -225,6 +232,7 @@ class RoutingTable:
                     "level": route.level,
                     "strategy": route.strategy,
                     "confidence_threshold": route.confidence_threshold,
+                    "admission_policy": route.admission_policy,
                     "model": route.model,
                     "enabled_by_baseline": route.enabled_by_baseline,
                     "baseline_pass_rate": route.baseline_pass_rate,
@@ -279,6 +287,24 @@ class RoutingTable:
     ) -> tuple[DecisionOutcome, ModelCall | None]:
         point = decision_point(route.decision_point)
         request = request.model_copy(update={"model": route.model})
+        if route.decision_point == "placement.section_slot" and not request.candidates:
+            return (
+                self._rule_outcome(
+                    route,
+                    request,
+                    "没有可用的兼容章节候选，走规则默认值并标记待确认",
+                    fallback_used=True,
+                ).model_copy(
+                    update={
+                        "admission_evidence": {
+                            "policy": route.admission_policy,
+                            "accepted": False,
+                            "validator": "placement_constraints_v1",
+                        }
+                    }
+                ),
+                None,
+            )
         if not ctx.adapter.available():
             return (
                 self._rule_outcome(
@@ -291,43 +317,65 @@ class RoutingTable:
             )
 
         last: AdapterOutcome | None = None
+        admission: AdmissionResult | None = None
+        tokens_in = 0
+        tokens_out = 0
+        missing_confidence_count = 0
         attempts = 0
         for attempt in range(1, ctx.max_retries + 2):
             attempts = attempt
             outcome = ctx.adapter.call(request, point.output_type)
             last = outcome
-            if outcome.ok and outcome.schema_ok and self._above_threshold(route, outcome):
+            tokens_in += outcome.tokens_in or 0
+            tokens_out += outcome.tokens_out or 0
+            missing_confidence_count += int(outcome.confidence is None)
+            admission = admit_model(route, request, outcome)
+            if admission.accepted:
+                result = self._model_outcome(route, request, outcome, attempts, admission)
                 return (
-                    self._model_outcome(route, request, outcome, attempts),
-                    self._call_record(route, request, outcome, attempts),
+                    result.model_copy(
+                        update={
+                            "tokens_in": tokens_in,
+                            "tokens_out": tokens_out,
+                            "missing_confidence_count": missing_confidence_count,
+                        }
+                    ),
+                    self._call_record(route, request, outcome, attempts).model_copy(
+                        update={
+                            "tokens_in": tokens_in,
+                            "tokens_out": tokens_out,
+                        }
+                    ),
                 )
-            request = request.model_copy(
-                update={"feedback": [*request.feedback, _failure_hint(outcome)]}
-            )
+            request = request.model_copy(update={"feedback": [*request.feedback, admission.reason]})
 
         assert last is not None  # 循环至少执行一次；此断言只为类型收窄
-        call = self._call_record(route, request, last, attempts)
+        assert admission is not None
+        call = self._call_record(route, request, last, attempts).model_copy(
+            update={"tokens_in": tokens_in, "tokens_out": tokens_out}
+        )
         return (
             self._rule_outcome(
                 route,
                 request,
-                f"{_failure_hint(last)}；重试 {attempts - 1} 次后走规则默认值"
+                f"{admission.reason}；重试 {attempts - 1} 次后走规则默认值"
                 f"（来源 {point.fallback.source}）并标记待确认",
                 fallback_used=True,
                 attempts=attempts,
+            ).model_copy(
+                update={
+                    "confidence": last.confidence,
+                    "admission_evidence": admission.evidence,
+                    "status": "pending"
+                    if last.confidence is None
+                    else ("pending" if point.fallback.mark_pending else "auto"),
+                    "tokens_in": tokens_in,
+                    "tokens_out": tokens_out,
+                    "missing_confidence_count": missing_confidence_count,
+                }
             ),
             call,
         )
-
-    @staticmethod
-    def _above_threshold(route: ResolvedRoute, outcome: AdapterOutcome) -> bool:
-        """置信度达标判定。**模型没给置信度一律按不达标处理**。
-
-        这条是保守方向的默认：把"没报置信度"当成"很有把握"，会让低置信项静默自动采用，
-        而那正是验收 39 要消灭的情形。
-        """
-        confidence = 0.0 if outcome.confidence is None else outcome.confidence
-        return confidence >= route.confidence_threshold
 
     @staticmethod
     def _model_outcome(
@@ -335,14 +383,15 @@ class RoutingTable:
         request: DecisionRequest,
         outcome: AdapterOutcome,
         attempts: int,
+        admission: AdmissionResult,
     ) -> DecisionOutcome:
         return DecisionOutcome(
             decision_point=route.decision_point,
             declared=route.declared,
             effective=route.effective,
-            chosen=outcome.chosen,
+            chosen=admission.chosen,
             target=request.target,
-            reason="模型结论在候选集内且置信度达标",
+            reason=admission.reason,
             source="model",
             status="pending" if route.level == "confirm" else "auto",
             confidence=outcome.confidence,
@@ -351,6 +400,7 @@ class RoutingTable:
             model=outcome.model or route.model,
             candidates=list(request.candidates),
             output=outcome.payload,
+            admission_evidence=admission.evidence,
         )
 
     @staticmethod
@@ -381,6 +431,7 @@ class RoutingTable:
             decision_point=route.decision_point,
             route=route.effective,
             model=outcome.model or route.model,
+            attempts=attempts,
             latency_ms=outcome.latency_ms,
             tokens_in=outcome.tokens_in,
             tokens_out=outcome.tokens_out,
@@ -417,6 +468,7 @@ class RoutingTable:
                 chosen=outcome.chosen,
                 reason=outcome.reason,
                 confidence=outcome.confidence,
+                admission_evidence=outcome.admission_evidence,
                 source=outcome.source,
                 status=outcome.status,
                 created_at=now_utc(),
@@ -425,14 +477,6 @@ class RoutingTable:
         if call is not None:
             ctx.recorder.record_model_call(call)
         return outcome
-
-
-def _failure_hint(outcome: AdapterOutcome) -> str:
-    if not outcome.ok:
-        return outcome.detail or outcome.error or "调用失败"
-    if not outcome.schema_ok:
-        return f"输出不符合 Schema：{outcome.detail}" if outcome.detail else "输出不符合 Schema"
-    return f"置信度 {outcome.confidence} 低于阈值，请给出更确定的结论"
 
 
 # ------------------------------------------------------------------ 构造
@@ -507,9 +551,17 @@ def _resolve_one(
 ) -> ResolvedRoute:
     """把一条声明 + 一条配置覆盖 + 一条基线数据解析成"该不该问模型"。"""
     _check_override_direction(point, override)
+    policy = override.admission_policy if override else "require_confidence"
+    if policy == "independent_validation" and point.id != "placement.section_slot":
+        raise EngineError(
+            ErrorCode.CONFIG_INVALID,
+            f"决策点 {point.id} 尚不支持独立校验准入",
+            where={"decision_point": point.id, "admission_policy": policy},
+            remediation=["使用 require_confidence；独立校验仅适用于章节放置"],
+        )
     declared: RouteKind = (override.route if override else None) or point.kind
     # 三个字段一律"配置没写就随归属走"。阈值必须用 `is not None` 判定而不能用 `or`：
-    # `confidence_threshold=0.0` 是合法配置（表示不做置信度门槛），而 `0.0 or 0.7`
+    # `confidence_threshold=0.0` 是合法配置（仍要求提供真实置信度），而 `0.0 or 0.7`
     # 会把它换成 0.7——一个"显式写下的值被默认值吃掉"的静默改写。
     level = override.level if override and override.level else ROUTE_LEVEL[declared]
     strategy = override.strategy if override and override.strategy else ROUTE_STRATEGY[declared]
@@ -547,6 +599,7 @@ def _resolve_one(
         level=level,
         strategy=strategy,
         confidence_threshold=threshold,
+        admission_policy=policy,
         model=override.model if override else None,
         enabled_by_baseline=point.enabled_by_baseline,
         baseline_pass_rate=rate,

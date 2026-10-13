@@ -73,6 +73,7 @@ RENDER_REL: Final = "work/render.json"
 #: ``qa`` → 门禁报告。逻辑名必须叫 ``report``（``server.jobs.REPORT_OUTPUT_KEY``），
 #: 与下面的 ``REPORT_REL`` 是两件事：前者是断点里的键，后者是文件位置。
 REPORT_REL: Final = "work/report.json"
+DECISIONS_REL: Final = "work/decisions.json"
 
 #: 各阶段自报的判定。``qa`` 阶段把它们作为 ``QaContext.upstream`` 并进报告——
 #: 阶段体的 ``findings`` 只进事件流，不进报告；不落盘就没有第二条路把它们带到

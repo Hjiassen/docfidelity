@@ -564,6 +564,11 @@
             "title": "Cases Digest",
             "type": "string"
           },
+          "endpoint_digest": {
+            "default": "",
+            "title": "Endpoint Digest",
+            "type": "string"
+          },
           "failures": {
             "description": "去重后的失败原因（逐字转发，界面直接显示）",
             "items": {
@@ -1342,10 +1347,194 @@
         "title": "DataBoundary",
         "type": "object"
       },
+      "Decision": {
+        "additionalProperties": false,
+        "description": "一次决策留痕。\n\n低置信（``confidence`` 低于档案 / 规则集阈值）或 ``status=\"pending\"`` 的决策，\n必须在界面上进入裁决队列；**不得静默采用**（验收 39）。",
+        "properties": {
+          "admission_evidence": {
+            "additionalProperties": true,
+            "description": "模型准入校验的依据与结果；不代表语义正确性或虚构的置信度",
+            "title": "Admission Evidence",
+            "type": "object"
+          },
+          "chosen": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chosen"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decision_id": {
+            "title": "Decision Id",
+            "type": "string"
+          },
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "kind": {
+            "description": "决策点标识",
+            "title": "Kind",
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/DecisionOption"
+            },
+            "title": "Options",
+            "type": "array"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "source": {
+            "default": "rule_default",
+            "enum": [
+              "rule_default",
+              "model",
+              "manual",
+              "fallback"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "default": "auto",
+            "enum": [
+              "auto",
+              "pending",
+              "confirmed",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "target": {
+            "description": "作用对象：单元 id / 槽位 id / 模板引用等",
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision_id",
+          "kind",
+          "target",
+          "created_at"
+        ],
+        "title": "Decision",
+        "type": "object"
+      },
+      "DecisionOption": {
+        "additionalProperties": false,
+        "description": "一个候选选项。低置信选项必须给出 ``reason``，供人在裁决队列中判断。",
+        "properties": {
+          "confidence": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "title": "DecisionOption",
+        "type": "object"
+      },
       "DecisionPointRoute": {
         "additionalProperties": false,
         "description": "单个决策点的路由配置。\n\n``route`` 为 ``None`` 表示\"由引擎内置的默认路由表决定\"——默认表逐点对应需求 5.2.3\n的分级表，故\"未显式声明\"不等于\"没有归属\"，但配置一旦写了就以配置为准。\n\n``level`` / ``strategy`` / ``confidence_threshold`` 三个字段**同样以 ``None`` 表示\n\"由归属决定\"**。它们不能带非空默认值：配置项里最常写的只有 ``model``（换一个模型），\n若其余字段带默认值，那么\"只换了模型标识\"会顺带把 ``level`` 从 ``confirm`` 压回\n``auto``、把 ``strategy`` 从 ``rule_only`` 换成 ``rule_then_model``——\n而这两处行为改变在配置文本里**完全看不出来**。",
         "properties": {
+          "admission_policy": {
+            "default": "require_confidence",
+            "description": "模型准入依据：真实置信度 / 独立约束校验；独立校验仅支持章节放置，仍需同策略基线达标",
+            "enum": [
+              "require_confidence",
+              "independent_validation"
+            ],
+            "title": "Admission Policy",
+            "type": "string"
+          },
           "confidence_threshold": {
             "anyOf": [
               {
@@ -3238,6 +3427,141 @@
         "title": "Margins",
         "type": "object"
       },
+      "ModelCall": {
+        "additionalProperties": false,
+        "description": "一次决策的模型调用汇总（Tracing，含全部重试）。\n\n失败时 ``ok=False`` 且 ``fallback_used=True``——这**不是**构建失败，\n只是决策降级（NFR-26 / 验收 39）。",
+        "properties": {
+          "attempts": {
+            "default": 1,
+            "description": "实际调用次数；token 为全部尝试累计值",
+            "minimum": 1.0,
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "call_id": {
+            "title": "Call Id",
+            "type": "string"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decision_point": {
+            "title": "Decision Point",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EngineErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fallback_used": {
+            "default": false,
+            "title": "Fallback Used",
+            "type": "boolean"
+          },
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "ok": {
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "route": {
+            "description": "路由目标：agent 名 / 规划器标识",
+            "title": "Route",
+            "type": "string"
+          },
+          "tokens_in": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens In"
+          },
+          "tokens_out": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens Out"
+          }
+        },
+        "required": [
+          "call_id",
+          "decision_point",
+          "route",
+          "created_at"
+        ],
+        "title": "ModelCall",
+        "type": "object"
+      },
       "ModelCapabilities": {
         "description": "模型侧能力现状（``GET /settings/model/capabilities``）。\n\n**与 ``ModelHealth`` 分开是有意的**：那个回答\"连得上吗\"，这个回答\"接上之后会怎么跑\"。\n\n``grammar`` / ``baseline`` 直接复用内核那两个模型（``agents.sdk_adapter`` 与\n``agents.baseline`` 的公开形状，经 ``pipeline`` 的决策接缝转出），不在这里抄一份：\n抄一份就是\"响应字段与服务端读的字段\"两处口径，改一处即静默错位（DD-14.1 的前置条件\n就是\"形状本身不重复\"）。它们随 ``GET /settings/model/capabilities`` 一起进\n``openapi.json``，前端照生成即可。",
         "properties": {
@@ -4886,6 +5210,14 @@
             "title": "Adjudications",
             "type": "array"
           },
+          "decisions": {
+            "description": "构建采用或降级的语义决策",
+            "items": {
+              "$ref": "#/components/schemas/Decision"
+            },
+            "title": "Decisions",
+            "type": "array"
+          },
           "findings": {
             "items": {
               "$ref": "#/components/schemas/Finding"
@@ -4906,6 +5238,14 @@
           "job_id": {
             "title": "Job Id",
             "type": "string"
+          },
+          "model_calls": {
+            "description": "支撑构建决策的调用证据",
+            "items": {
+              "$ref": "#/components/schemas/ModelCall"
+            },
+            "title": "Model Calls",
+            "type": "array"
           },
           "report_id": {
             "title": "Report Id",

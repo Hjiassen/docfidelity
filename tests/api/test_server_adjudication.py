@@ -290,6 +290,10 @@ def test_a_decided_job_really_finishes_when_the_worker_picks_it_up(
 
     assert scene.harness.repository.get_job(scene.child_id).status == "succeeded"
     assert scene.harness.stages["qa"].call_count == calls_before, "断点应被复用"
+    report = scene.harness.repository.find_report(scene.child_id)
+    assert report is not None and report.verdict == "pass"
+    assert len(report.adjudications) == 2
+    assert scene.harness.services.inbox() == []
 
 
 def test_a_settled_job_stays_put_while_a_blocker_is_unwaived(tmp_path: Path) -> None:

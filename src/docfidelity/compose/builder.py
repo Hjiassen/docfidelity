@@ -60,6 +60,7 @@ from docfidelity.model import DomainModelRegistry, EvalContext, evaluate
 
 from .captions import assign as assign_captions
 from .glossary import apply_glossary_to_ir, glossary_apply, iter_texts, unresolved_variables
+from .placement import PlacementResolver, place_unbound
 from .purity import PURITY_RULE_ID, assert_ir_clean, check_ir_purity
 from .slots import DEFAULT_SLOT, SLOT_RULE_ID, SlotPolicy, check_slots, orphan_slots
 from .traces import build_traces, used_object_refs
@@ -110,6 +111,7 @@ def compose(
     terminology: Terminology | None = None,
     slot_policy: SlotPolicy | None = None,
     purity_words: Iterable[str] = (),
+    placement_resolver: PlacementResolver | None = None,
 ) -> ComposeResult:
     """把事实快照装配为内容 IR。
 
@@ -144,7 +146,9 @@ def compose(
 
     chapters = list(profile.genre.chapter_skeleton)
     slot_level = _resolve_slot_levels(chapters, findings)
-    units_by_slot = _evaluate(profile, objects, domain, terms, slot_level, findings, materialized)
+    units_by_slot = _evaluate(
+        profile, objects, domain, terms, slot_level, findings, materialized, placement_resolver
+    )
 
     ir = _assemble(
         profile=profile,
@@ -266,6 +270,7 @@ def _evaluate(
     slot_level: dict[str, int],
     findings: list[Finding],
     materialized: list[DomainObject],
+    placement_resolver: PlacementResolver | None,
 ) -> dict[str, list[ContentUnit]]:
     """逐条投影求值，按槽位归集。
 
@@ -285,7 +290,17 @@ def _evaluate(
             findings=findings,
             materialized=materialized,
         )
-        by_slot.setdefault(key, []).extend(evaluate(objects, spec, ctx))
+        units = evaluate(objects, spec, ctx)
+        if spec.slot is None and placement_resolver is not None:
+            place_unbound(
+                units,
+                profile.genre.chapter_skeleton,
+                placement_resolver,
+                by_slot,
+                initial_level=ctx.level,
+            )
+        else:
+            by_slot.setdefault(key, []).extend(units)
     return by_slot
 
 

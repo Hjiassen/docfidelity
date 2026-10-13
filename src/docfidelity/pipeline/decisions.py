@@ -50,7 +50,7 @@ from docfidelity.agents import (
 )
 from docfidelity.agents import load_status as _load_baseline_status
 from docfidelity.agents import probe_grammar as _probe_grammar
-from docfidelity.agents.baseline import baseline_digests, default_cases
+from docfidelity.agents.baseline import baseline_digests, default_cases, endpoint_digest
 from docfidelity.agents.catalog import MODEL_ROUTED
 from docfidelity.contracts.config import RoutingConfig
 from docfidelity.contracts.errors import EngineError
@@ -99,6 +99,7 @@ RECORD_KIND_FIELD: Final = "record"
 #: 的两段，共用一个类型、靠这个字段区分，界面按同一列渲染即可。
 RECORD_DECISION: Final = "decision"
 RECORD_MODEL_CALL: Final = "model_call"
+RECORD_STAGE_START: Final = "stage_start"
 
 
 class JournalRecorder:
@@ -133,8 +134,22 @@ class JournalRecorder:
     ) -> None:
         self._events = events
         self._job_id = path_segment(job_id, field="job_id")
-        self._inner = inner if inner is not None else MemoryRecorder(job_id=job_id)
+        self._inner = (
+            inner
+            if inner is not None
+            else _recorder_from_events(events.events(job_id), job_id=job_id)
+        )
         self._mirror = mirror
+        self._stage: str | None = None
+
+    def begin_stage(self, stage: str) -> None:
+        """实际重跑时作废该阶段旧待办，保留完整审计历史。"""
+        self._stage = stage
+        self._events.emit(
+            self._job_id,
+            DECISION_EVENT_TYPE,
+            {RECORD_KIND_FIELD: RECORD_STAGE_START, "stage": stage},
+        )
 
     @property
     def job_id(self) -> str:
@@ -165,7 +180,11 @@ class JournalRecorder:
         self._events.emit(
             self._job_id,
             DECISION_EVENT_TYPE,
-            {RECORD_KIND_FIELD: record, **payload.model_dump(mode="json")},
+            {
+                RECORD_KIND_FIELD: record,
+                **({"stage": self._stage} if self._stage is not None else {}),
+                **payload.model_dump(mode="json"),
+            },
         )
 
     # -------------------------------------------------------------- 查询
@@ -177,7 +196,8 @@ class JournalRecorder:
 
     def pending_decisions(self) -> tuple[Decision, ...]:
         """进裁决队列的项（低置信 / 兜底 / 需人工）。NFR-26 的下游就是它。"""
-        return self._inner.pending_decisions()
+        active = _active_decision_ids(self._events.events(self._job_id))
+        return tuple(item for item in self._inner.pending_decisions() if item.decision_id in active)
 
     def silent_adoptions(self) -> tuple[Decision, ...]:
         """低置信却被自动采用的项，**应恒为空**（验收 39）。"""
@@ -188,7 +208,9 @@ class JournalRecorder:
         return self._inner.token_totals()
 
     def describe(self) -> dict[str, Any]:
-        return self._inner.describe()
+        description = self._inner.describe()
+        description["pending"] = len(self.pending_decisions())
+        return description
 
 
 class DecisionSession:
@@ -222,9 +244,14 @@ class DecisionSession:
             adapter=adapter,
             job_id=job_id,
             max_retries=max_retries,
+            sequence=len(recorder.decisions()),
         )
 
     # -------------------------------------------------------------- 决策
+    def begin_stage(self, stage: str) -> None:
+        """阶段真正执行前更新有效决策作用域；复用断点时不调用。"""
+        self.recorder.begin_stage(stage)
+
     def decide(
         self,
         decision_point_id: str,
@@ -369,7 +396,13 @@ def model_session_factory(
                 model_enabled=False,
                 max_retries=max_retries,
             )
-        rates, rejected = _resolve_baseline(baseline, baseline_path, model=model, routing=routing)
+        rates, rejected = _resolve_baseline(
+            baseline,
+            baseline_path,
+            model=model,
+            routing=routing,
+            endpoint_fingerprint=endpoint_digest(base_url),
+        )
         session = build_session(
             routing,
             job_id=job.job_id,
@@ -394,6 +427,7 @@ def _resolve_baseline(
     *,
     model: str,
     routing: RoutingConfig | None,
+    endpoint_fingerprint: str,
 ) -> tuple[dict[str, float], dict[str, str]]:
     """验证生产基线身份，并把未验证的模型点交回规则与裁决队列。"""
     routes = build_routing(routing, model_enabled=True).describe()
@@ -415,6 +449,8 @@ def _resolve_baseline(
             else:
                 if status.model != model:
                     problem = "基线报告的模型与当前模型不一致"
+                elif status.endpoint_digest != endpoint_fingerprint:
+                    problem = "基线报告的端点指纹缺失或与当前部署不一致"
                 elif status.cases_digest != cases_digest:
                     problem = "基线报告的样本指纹与当前样本不一致"
                 elif status.routing_digest != routing_digest:
@@ -488,13 +524,36 @@ def _recorder_from_events(events: Sequence[JobEvent], *, job_id: str) -> MemoryR
     for event in events:
         if event.type != DECISION_EVENT_TYPE:
             continue
-        payload = {key: value for key, value in event.payload.items() if key != RECORD_KIND_FIELD}
+        payload = {
+            key: value
+            for key, value in event.payload.items()
+            if key not in {RECORD_KIND_FIELD, "stage"}
+        }
         kind = event.payload.get(RECORD_KIND_FIELD)
         if kind == RECORD_DECISION:
             recorder.record_decision(Decision.load(payload))
         elif kind == RECORD_MODEL_CALL:
             recorder.record_model_call(ModelCall.load(payload))
     return recorder
+
+
+def _active_decision_ids(events: Sequence[JobEvent]) -> set[str]:
+    """重放阶段作用域；旧事件可推断阶段，无法推断的记录保守保留。"""
+    scopes: dict[str | None, set[str]] = {}
+    inferred: str | None = None
+    for event in events:
+        if event.type == "stage" and event.payload.get("status") == "running":
+            inferred = event.payload.get("stage")
+        if event.type != DECISION_EVENT_TYPE:
+            continue
+        kind = event.payload.get(RECORD_KIND_FIELD)
+        scope = event.payload.get("stage", inferred)
+        if kind == RECORD_STAGE_START:
+            scopes[scope] = set()
+            inferred = scope
+        elif kind == RECORD_DECISION:
+            scopes.setdefault(scope, set()).add(event.payload["decision_id"])
+    return set().union(*scopes.values())
 
 
 def decisions_from_events(events: Sequence[JobEvent], *, job_id: str = "") -> tuple[Decision, ...]:
@@ -511,4 +570,9 @@ def pending_decisions_from_events(
     而"这份作业还有哪些项在等人裁决"必须跨重启成立。事件是决策的持久形态
     （``JournalRecorder`` 的写入端），读它才是权威。
     """
-    return _recorder_from_events(events, job_id=job_id).pending_decisions()
+    active = _active_decision_ids(events)
+    return tuple(
+        item
+        for item in _recorder_from_events(events, job_id=job_id).pending_decisions()
+        if item.decision_id in active
+    )

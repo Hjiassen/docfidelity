@@ -47,8 +47,8 @@ from typing import Any, Final, cast
 from docfidelity.compose import compose
 from docfidelity.contracts.errors import ConfigurationError, EngineError, ErrorCode
 from docfidelity.contracts.fact import FactSnapshot, SourceConfig
-from docfidelity.contracts.ir import ContentIR
-from docfidelity.contracts.job import StageName
+from docfidelity.contracts.ir import ContentIR, ContentUnit
+from docfidelity.contracts.job import Decision, ModelCall, StageName
 from docfidelity.contracts.qa import (
     Finding,
     Location,
@@ -81,6 +81,7 @@ from docfidelity.render import (
 )
 
 from .inputs import (
+    DECISIONS_REL,
     FACTS_REL,
     FINDINGS_DIRNAME,
     IR_REL,
@@ -230,6 +231,51 @@ def compose_stage(ctx: StageContext) -> StageOutcome:
     """
     inputs = BuildInputs.of(ctx.payload)
     snapshot = FactSnapshot.model_validate(ctx.workspace.read_json(FACTS_REL))
+    placements: list[dict[str, Any]] = []
+    decision_findings: list[Finding] = []
+
+    def resolve_placement(unit: ContentUnit, candidates: Mapping[str, list[str]]) -> str | None:
+        summary = _placement_summary(unit)
+        semantic_candidates = list(candidates) if summary else []
+        outcome = ctx.decide(
+            "placement.section_slot",
+            {
+                "unit_ref": unit.unit_id,
+                "summary": summary,
+                "chapters": semantic_candidates,
+            },
+            target=unit.unit_id,
+            candidates=semantic_candidates,
+            context={"placement_constraints": dict(candidates)},
+        )
+        selected = (
+            outcome.chosen if outcome.source == "model" and outcome.status == "auto" else None
+        )
+        applied = selected if selected in candidates else next(iter(candidates), None)
+        placements.append(
+            {
+                "unit_id": unit.unit_id,
+                "chosen": outcome.chosen,
+                "applied": applied,
+                "source": outcome.source,
+                "status": outcome.status,
+            }
+        )
+        if outcome.status == "pending":
+            decision_findings.append(
+                Finding(
+                    rule_id="NFR-26",
+                    severity="major",
+                    message="章节落位待确认；已使用档案候选顺序的规则默认值",
+                    location=Location(unit_id=unit.unit_id),
+                    evidence=json.dumps(placements[-1], ensure_ascii=False),
+                    suggestion="核对落位决策并裁决，或在档案中显式绑定投影槽位",
+                )
+            )
+        return selected
+
+    decision_start = len(ctx.decisions.decisions())
+    call_start = len(ctx.decisions.model_calls())
     result = compose(
         snapshot,
         inputs.profile,
@@ -238,13 +284,26 @@ def compose_stage(ctx: StageContext) -> StageOutcome:
         template_ref=inputs.template_ref,
         terminology=inputs.terminology,
         purity_words=_purity_words(inputs),
+        placement_resolver=resolve_placement,
+    )
+    evidence_rel = ctx.workspace.put_json(
+        DECISIONS_REL,
+        {
+            "placements": placements,
+            "decisions": [
+                item.model_dump(mode="json") for item in ctx.decisions.decisions()[decision_start:]
+            ],
+            "model_calls": [
+                item.model_dump(mode="json") for item in ctx.decisions.model_calls()[call_start:]
+            ],
+        },
     )
     ir_rel = ctx.workspace.put_json(IR_REL, result.ir.model_dump(mode="json"))
     traces_rel = ctx.workspace.put_json(TRACES_REL, result.traces.model_dump(mode="json"))
-    findings = list(result.findings)
+    findings = [*result.findings, *decision_findings]
     _write_findings(ctx, findings)
     return StageOutcome(
-        outputs={"ir": ir_rel, "traces": traces_rel},
+        outputs={"ir": ir_rel, "traces": traces_rel, "decisions": evidence_rel},
         findings=findings,
         detail={
             "doc_key": inputs.doc_key,
@@ -253,6 +312,29 @@ def compose_stage(ctx: StageContext) -> StageOutcome:
             "units": len(result.ir.units),
         },
     )
+
+
+def _placement_summary(unit: ContentUnit) -> str:
+    """裁剪正文与结构化可见内容，缺少语义依据时不请求模型。"""
+    from itertools import islice
+
+    excerpts: list[str] = []
+    for item in islice(unit.walk(), 8):
+        if item.text and item.text.strip():
+            excerpts.append(item.text[:512])
+        caption = item.fields.get("caption")
+        if isinstance(caption, str) and caption.strip():
+            excerpts.append(caption[:512])
+        for key in ("columns", "items", "rows"):
+            values = item.fields.get(key)
+            if not isinstance(values, list):
+                continue
+            for value in values[: 3 if key == "rows" else 8]:
+                cells = value[:8] if isinstance(value, list) else [value]
+                texts = [cell[:128] for cell in cells if isinstance(cell, str) and cell.strip()]
+                if texts:
+                    excerpts.append(json.dumps({key: texts}, ensure_ascii=False))
+    return "\n".join(excerpts)[:4096]
 
 
 def _purity_words(inputs: BuildInputs) -> tuple[str, ...]:
@@ -415,6 +497,10 @@ def qa_stage(ctx: StageContext) -> StageOutcome:
             job_id=ctx.job.job_id,
         )
 
+    if ctx.workspace.resolve(DECISIONS_REL).is_file():
+        evidence = ctx.workspace.read_json(DECISIONS_REL)
+        report.decisions = [Decision.model_validate(item) for item in evidence["decisions"]]
+        report.model_calls = [ModelCall.model_validate(item) for item in evidence["model_calls"]]
     rel = ctx.workspace.put_json(REPORT_REL, report.model_dump(mode="json"))
     findings = list(report.findings)
     _write_findings(ctx, findings)

@@ -118,7 +118,11 @@ def test_decision_events_are_persisted_into_the_job_event_log(tmp_path: Path) ->
     child_id = harness.services.job_children(orchestration_id)[0].job_id
 
     events = harness.runner.events.since(child_id, 0)
-    decisions = [event for event in events if event.type == "decision"]
+    decisions = [
+        event
+        for event in events
+        if event.type == "decision" and event.payload.get("record") == "decision"
+    ]
     assert len(decisions) == 1
     assert decisions[0].payload["kind"] == _RULE_POINT
     assert decisions[0].payload["record"] == "decision"
@@ -142,7 +146,7 @@ def test_injected_adapter_is_adopted_end_to_end(tmp_path: Path) -> None:
             _DECISION_POINT: AdapterOutcome(
                 ok=True,
                 schema_ok=True,
-                payload={"choice": "章节三"},
+                payload={"unit_ref": "fixture-unit", "chapter_path": ["章节三"]},
                 chosen="章节三",
                 confidence=0.96,
                 model="m-test",
@@ -160,7 +164,14 @@ def test_injected_adapter_is_adopted_end_to_end(tmp_path: Path) -> None:
 
     harness = build_harness(
         tmp_path,
-        stages=build_registry(qa={"decide_point": _DECISION_POINT}),
+        stages=build_registry(
+            qa={
+                "decide_point": _DECISION_POINT,
+                "decide_target": "fixture-unit",
+                "decide_candidates": ("章节三",),
+                "decide_inputs": {"unit_ref": "fixture-unit", "chapters": ["章节三"]},
+            }
+        ),
         decide_session=factory,
     )
     orchestration_id = harness.build(harness.new_project())
@@ -271,7 +282,14 @@ def test_a_dead_model_service_queues_every_decision_and_adopts_none(tmp_path: Pa
 
     harness = build_harness(
         tmp_path,
-        stages=build_registry(qa={"decide_point": _DECISION_POINT}),
+        stages=build_registry(
+            qa={
+                "decide_point": _DECISION_POINT,
+                "decide_target": "fixture-unit",
+                "decide_candidates": ("章节三",),
+                "decide_inputs": {"unit_ref": "fixture-unit", "chapters": ["章节三"]},
+            }
+        ),
         decide_session=factory,
     )
     orchestration_id = harness.build(harness.new_project())
@@ -406,6 +424,7 @@ def test_the_storage_root_holds_the_baseline_the_router_obeys(
         BaselineReport,
         baseline_digests,
         default_cases,
+        endpoint_digest,
         save_report,
     )
     from docfidelity.agents.routing import build_routing
@@ -417,6 +436,7 @@ def test_the_storage_root_holds_the_baseline_the_router_obeys(
     save_report(
         BaselineReport(
             model="m-1",
+            endpoint_digest=endpoint_digest("http://127.0.0.1:9/v1"),
             cases_digest=cases_digest,
             routing_digest=routing_digest,
             by_point={_DECISION_POINT: rate},

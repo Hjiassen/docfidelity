@@ -1585,6 +1585,11 @@ export interface components {
              */
             cases_digest: string;
             /**
+             * Endpoint Digest
+             * @default
+             */
+            endpoint_digest: string;
+            /**
              * Failures
              * @description 去重后的失败原因（逐字转发，界面直接显示）
              */
@@ -2084,6 +2089,85 @@ export interface components {
             storage_path?: string | null;
         };
         /**
+         * Decision
+         * @description 一次决策留痕。
+         *
+         *     低置信（``confidence`` 低于档案 / 规则集阈值）或 ``status="pending"`` 的决策，
+         *     必须在界面上进入裁决队列；**不得静默采用**（验收 39）。
+         */
+        Decision: {
+            /**
+             * Admission Evidence
+             * @description 模型准入校验的依据与结果；不代表语义正确性或虚构的置信度
+             */
+            admission_evidence?: {
+                [key: string]: unknown;
+            };
+            /** Chosen */
+            chosen?: string | null;
+            /** Confidence */
+            confidence?: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decision Id */
+            decision_id: string;
+            /**
+             * Format Version
+             * @default 1.0.0
+             */
+            format_version: string;
+            /** Job Id */
+            job_id?: string | null;
+            /**
+             * Kind
+             * @description 决策点标识
+             */
+            kind: string;
+            /** Options */
+            options?: components["schemas"]["DecisionOption"][];
+            /** Reason */
+            reason?: string | null;
+            /**
+             * Source
+             * @default rule_default
+             * @enum {string}
+             */
+            source: "rule_default" | "model" | "manual" | "fallback";
+            /**
+             * Status
+             * @default auto
+             * @enum {string}
+             */
+            status: "auto" | "pending" | "confirmed" | "rejected";
+            /**
+             * Target
+             * @description 作用对象：单元 id / 槽位 id / 模板引用等
+             */
+            target: string;
+        };
+        /**
+         * DecisionOption
+         * @description 一个候选选项。低置信选项必须给出 ``reason``，供人在裁决队列中判断。
+         */
+        DecisionOption: {
+            /** Confidence */
+            confidence?: number | null;
+            /**
+             * Format Version
+             * @default 1.0.0
+             */
+            format_version: string;
+            /** Label */
+            label?: string | null;
+            /** Reason */
+            reason?: string | null;
+            /** Value */
+            value: string;
+        };
+        /**
          * DecisionPointRoute
          * @description 单个决策点的路由配置。
          *
@@ -2097,6 +2181,13 @@ export interface components {
          *     而这两处行为改变在配置文本里**完全看不出来**。
          */
         DecisionPointRoute: {
+            /**
+             * Admission Policy
+             * @description 模型准入依据：真实置信度 / 独立约束校验；独立校验仅支持章节放置，仍需同策略基线达标
+             * @default require_confidence
+             * @enum {string}
+             */
+            admission_policy: "require_confidence" | "independent_validation";
             /**
              * Confidence Threshold
              * @description 低于此阈值不得自动采用，必须进裁决队列；为空用引擎默认 0.7
@@ -3140,6 +3231,63 @@ export interface components {
             top_twips: number;
         };
         /**
+         * ModelCall
+         * @description 一次决策的模型调用汇总（Tracing，含全部重试）。
+         *
+         *     失败时 ``ok=False`` 且 ``fallback_used=True``——这**不是**构建失败，
+         *     只是决策降级（NFR-26 / 验收 39）。
+         */
+        ModelCall: {
+            /**
+             * Attempts
+             * @description 实际调用次数；token 为全部尝试累计值
+             * @default 1
+             */
+            attempts: number;
+            /** Call Id */
+            call_id: string;
+            /** Confidence */
+            confidence?: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decision Point */
+            decision_point: string;
+            error?: components["schemas"]["EngineErrorInfo"] | null;
+            /**
+             * Fallback Used
+             * @default false
+             */
+            fallback_used: boolean;
+            /**
+             * Format Version
+             * @default 1.0.0
+             */
+            format_version: string;
+            /** Job Id */
+            job_id?: string | null;
+            /** Latency Ms */
+            latency_ms?: number | null;
+            /** Model */
+            model?: string | null;
+            /**
+             * Ok
+             * @default true
+             */
+            ok: boolean;
+            /**
+             * Route
+             * @description 路由目标：agent 名 / 规划器标识
+             */
+            route: string;
+            /** Tokens In */
+            tokens_in?: number | null;
+            /** Tokens Out */
+            tokens_out?: number | null;
+        };
+        /**
          * ModelCapabilities
          * @description 模型侧能力现状（``GET /settings/model/capabilities``）。
          *
@@ -4061,6 +4209,11 @@ export interface components {
              * @description 人工裁决留痕（FR-M7-06）；与 waivers 并存：豁免只是三种动作之一
              */
             adjudications?: components["schemas"]["Adjudication"][];
+            /**
+             * Decisions
+             * @description 构建采用或降级的语义决策
+             */
+            decisions?: components["schemas"]["Decision"][];
             /** Findings */
             findings?: components["schemas"]["Finding"][];
             /**
@@ -4075,6 +4228,11 @@ export interface components {
             generated_at: string;
             /** Job Id */
             job_id: string;
+            /**
+             * Model Calls
+             * @description 支撑构建决策的调用证据
+             */
+            model_calls?: components["schemas"]["ModelCall"][];
             /** Report Id */
             report_id: string;
             /**

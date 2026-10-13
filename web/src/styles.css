@@ -104,7 +104,7 @@ kbd,
   display: grid;
   grid-template:
     "top top" var(--topbar-h)
-    "nav main" 1fr / var(--nav-w) 1fr;
+    "nav main" 1fr / var(--nav-w) minmax(0, 1fr);
   min-height: 100%;
 }
 
@@ -171,8 +171,39 @@ kbd,
 
 .main {
   grid-area: main;
+  min-width: 0;
   padding: 20px 24px 48px;
   max-width: 1180px;
+}
+
+@media (max-width: 760px) {
+  .shell {
+    grid-template: "top" auto "nav" auto "main" 1fr / minmax(0, 1fr);
+  }
+  .topbar {
+    flex-wrap: wrap;
+    padding: 8px 12px;
+  }
+  .topbar__spacer, .sidenav__group {
+    display: none;
+  }
+  .sidenav {
+    display: flex;
+    min-width: 0;
+    overflow-x: auto;
+    padding: 6px;
+    border-right: none;
+  }
+  .sidenav__item {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .main {
+    padding: 16px 12px 32px;
+  }
+  .page-head {
+    flex-wrap: wrap;
+  }
 }
 
 .banner {

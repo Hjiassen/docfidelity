@@ -546,10 +546,14 @@ class JobRunner:
                 stopped_at = stage
                 break
 
-        pending = session.pending_decisions()
         artifacts = self._collect_artifacts(running)
         if stopped_at is None:
             self._store_report(running.job_id)
+        report = self._repository.find_report(running.job_id)
+        decided = {item.subject_id for item in report.adjudications} if report else set()
+        pending = tuple(
+            item for item in session.pending_decisions() if item.decision_id not in decided
+        )
         settled = self._settle(running, stages, stopped_at, pending=pending)
         self._aggregate_parent(settled, has_pending_decision=bool(pending))
         self._events.emit(
@@ -724,11 +728,7 @@ class JobRunner:
 
     # ---------------------------------------------------------------- 报告
     def _store_report(self, job_id: str) -> None:
-        """若 ``qa`` 阶段产出了报告（输出逻辑名 ``report``），把它落库。
-
-        报告是**元数据**：它读不出来不该让一份已经渲染好的文档变成"构建失败"。
-        所以这里只发一条 ``log`` 事件，作业状态不动。
-        """
+        """登记报告并保留同一断点的裁决；读取失败仅记事件，不影响产物。"""
         outputs = self._workspace_outputs(job_id)
         relative = outputs.get(REPORT_OUTPUT_KEY)
         if relative is None:
@@ -746,6 +746,13 @@ class JobRunner:
                     "detail": str(exc),
                 },
             )
+            return
+        stored = self._repository.find_report(job_id)
+        if stored and (stored.report_id, stored.generated_at) == (
+            report.report_id,
+            report.generated_at,
+        ):
+            # 同一份断点报告的人工裁决已落库，不能用原始报告覆盖。
             return
         self._repository.put_report(job_id, report)
 

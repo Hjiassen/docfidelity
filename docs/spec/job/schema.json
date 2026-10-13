@@ -151,6 +151,12 @@
       "additionalProperties": false,
       "description": "一次决策留痕。\n\n低置信（``confidence`` 低于档案 / 规则集阈值）或 ``status=\"pending\"`` 的决策，\n必须在界面上进入裁决队列；**不得静默采用**（验收 39）。",
       "properties": {
+        "admission_evidence": {
+          "additionalProperties": true,
+          "description": "模型准入校验的依据与结果；不代表语义正确性或虚构的置信度",
+          "title": "Admission Evidence",
+          "type": "object"
+        },
         "chosen": {
           "anyOf": [
             {
@@ -564,8 +570,15 @@
     },
     "ModelCall": {
       "additionalProperties": false,
-      "description": "一次模型调用留痕（Tracing）。\n\n失败时 ``ok=False`` 且 ``fallback_used=True``——这**不是**构建失败，\n只是决策降级（NFR-26 / 验收 39）。",
+      "description": "一次决策的模型调用汇总（Tracing，含全部重试）。\n\n失败时 ``ok=False`` 且 ``fallback_used=True``——这**不是**构建失败，\n只是决策降级（NFR-26 / 验收 39）。",
       "properties": {
+        "attempts": {
+          "default": 1,
+          "description": "实际调用次数；token 为全部尝试累计值",
+          "minimum": 1,
+          "title": "Attempts",
+          "type": "integer"
+        },
         "call_id": {
           "title": "Call Id",
           "type": "string"

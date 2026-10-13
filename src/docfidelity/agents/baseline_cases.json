@@ -3,7 +3,7 @@
   "_note": "小模型基线评测的内置样本集（TASK-P0-17 / NFR-23）。通过率喂给 routing 的 baseline，未达阈值的决策点被强制由规则接管。样本一律用中性词——引擎与它的资产都不得携带文档类型名与领域概念名（NFR-28 / 验收 42），这条由 tests/unit/test_agents_baseline.py 守着（CI 脚本只扫 *.py，扫不到本文件）。",
   "_shapes": {
     "dedup.semantic_duplicate": "inputs: {left, right} —— 两段待判的条目描述",
-    "placement.section_slot": "inputs: {summary, chapters: [...]}；candidates 同 chapters",
+    "placement.section_slot": "inputs: {unit_ref, summary, chapters: [...]}；context.placement_constraints 为冻结的候选标签到兼容章节路径映射；expect 校验 unit_ref 与语义落位",
     "convention.advisory": "inputs: {finding_ref, detail}",
     "copy.generate": "inputs: {unit_id, text}",
     "review.document": "inputs: {unit_id, text}"
@@ -39,10 +39,12 @@
       "target": "u-access",
       "candidates": ["接入说明", "权限说明", "错误处理"],
       "inputs": {
-        "summary": "客户端如何取得访问凭据并完成首次调用",
+        "unit_ref": "u-access",
+        "summary": "客户端安装、首次启动以及连通检查的步骤",
         "chapters": ["接入说明", "权限说明", "错误处理"]
       },
-      "expect": { "chapter_path": ["接入说明"] },
+      "context": {"placement_constraints": {"接入说明": ["接入说明"], "权限说明": ["权限说明"], "错误处理": ["错误处理"]}},
+      "expect": { "unit_ref": "u-access", "chapter_path": ["接入说明"] },
       "note": "落位必须在候选章节内（不得创造章节）；这条考的就是候选内选择。"
     },
     {
@@ -51,11 +53,93 @@
       "target": "u-errors",
       "candidates": ["接入说明", "权限说明", "错误处理"],
       "inputs": {
+        "unit_ref": "u-errors",
         "summary": "各类失败情形的错误码清单与处置建议",
         "chapters": ["接入说明", "权限说明", "错误处理"]
       },
-      "expect": { "chapter_path": ["错误处理"] },
+      "context": {"placement_constraints": {"接入说明": ["接入说明"], "权限说明": ["权限说明"], "错误处理": ["错误处理"]}},
+      "expect": { "unit_ref": "u-errors", "chapter_path": ["错误处理"] },
       "note": "与上一条同候选集、不同内容 ⇒ 一起看才能区分\"真在选\"与\"总选第一个\"。"
+    },
+    {
+      "case_id": "placement-permissions-last",
+      "decision_point": "placement.section_slot",
+      "target": "u-permission-a",
+      "candidates": ["错误处理", "接入说明", "权限说明"],
+      "inputs": {"unit_ref": "u-permission-a", "summary": "不同角色可以查看哪些内容，以及授权和撤销授权的规则", "chapters": ["错误处理", "接入说明", "权限说明"]},
+      "context": {"placement_constraints": {"错误处理": ["错误处理"], "接入说明": ["接入说明"], "权限说明": ["权限说明"]}},
+      "expect": {"unit_ref": "u-permission-a", "chapter_path": ["权限说明"]},
+      "note": "正确章节位于末尾，必须保留当前单元引用。"
+    },
+    {
+      "case_id": "placement-permissions-first",
+      "decision_point": "placement.section_slot",
+      "target": "u-permission-b",
+      "candidates": ["权限说明", "版式说明", "编号规则"],
+      "inputs": {"unit_ref": "u-permission-b", "summary": "访客与管理员的访问范围及角色授权限制", "chapters": ["权限说明", "版式说明", "编号规则"]},
+      "context": {"placement_constraints": {"权限说明": ["权限说明"], "版式说明": ["版式说明"], "编号规则": ["编号规则"]}},
+      "expect": {"unit_ref": "u-permission-b", "chapter_path": ["权限说明"]},
+      "note": "改变候选顺序和当前引用，防止按位置选择或照抄引用。"
+    },
+    {
+      "case_id": "placement-numbering-middle",
+      "decision_point": "placement.section_slot",
+      "target": "u-number-a",
+      "candidates": ["术语说明", "编号规则", "版式说明"],
+      "inputs": {"unit_ref": "u-number-a", "summary": "章节编号和图表编号的递增方式以及跨章重置要求", "chapters": ["术语说明", "编号规则", "版式说明"]},
+      "context": {"placement_constraints": {"术语说明": ["术语说明"], "编号规则": ["编号规则"], "版式说明": ["版式说明"]}},
+      "expect": {"unit_ref": "u-number-a", "chapter_path": ["编号规则"]},
+      "note": "考察中间候选与编号主题的对应。"
+    },
+    {
+      "case_id": "placement-numbering-last",
+      "decision_point": "placement.section_slot",
+      "target": "u-number-b",
+      "candidates": ["版式说明", "术语说明", "编号规则"],
+      "inputs": {"unit_ref": "u-number-b", "summary": "同级标题使用连续编号，附录采用独立编号序列", "chapters": ["版式说明", "术语说明", "编号规则"]},
+      "context": {"placement_constraints": {"版式说明": ["版式说明"], "术语说明": ["术语说明"], "编号规则": ["编号规则"]}},
+      "expect": {"unit_ref": "u-number-b", "chapter_path": ["编号规则"]},
+      "note": "编号主题放到不同顺序下再验一次引用和路径。"
+    },
+    {
+      "case_id": "placement-terminology-first",
+      "decision_point": "placement.section_slot",
+      "target": "u-term-a",
+      "candidates": ["术语说明", "编号规则", "权限说明"],
+      "inputs": {"unit_ref": "u-term-a", "summary": "统一缩写的完整名称、规范写法以及禁用写法", "chapters": ["术语说明", "编号规则", "权限说明"]},
+      "context": {"placement_constraints": {"术语说明": ["术语说明"], "编号规则": ["编号规则"], "权限说明": ["权限说明"]}},
+      "expect": {"unit_ref": "u-term-a", "chapter_path": ["术语说明"]},
+      "note": "术语规范不得因编号候选相邻而误放。"
+    },
+    {
+      "case_id": "placement-terminology-last",
+      "decision_point": "placement.section_slot",
+      "target": "u-term-b",
+      "candidates": ["权限说明", "版式说明", "术语说明"],
+      "inputs": {"unit_ref": "u-term-b", "summary": "正文和标题采用同一规范术语，缩写首次出现时展开全称", "chapters": ["权限说明", "版式说明", "术语说明"]},
+      "context": {"placement_constraints": {"权限说明": ["权限说明"], "版式说明": ["版式说明"], "术语说明": ["术语说明"]}},
+      "expect": {"unit_ref": "u-term-b", "chapter_path": ["术语说明"]},
+      "note": "同主题改变候选顺序与单元引用。"
+    },
+    {
+      "case_id": "placement-layout-middle",
+      "decision_point": "placement.section_slot",
+      "target": "u-layout-a",
+      "candidates": ["编号规则", "版式说明", "错误处理"],
+      "inputs": {"unit_ref": "u-layout-a", "summary": "页面边距、正文行距、标题字号以及表格对齐方式", "chapters": ["编号规则", "版式说明", "错误处理"]},
+      "context": {"placement_constraints": {"编号规则": ["编号规则"], "版式说明": ["版式说明"], "错误处理": ["错误处理"]}},
+      "expect": {"unit_ref": "u-layout-a", "chapter_path": ["版式说明"]},
+      "note": "仅选择版式章节；不允许模型修改版式。"
+    },
+    {
+      "case_id": "placement-layout-first",
+      "decision_point": "placement.section_slot",
+      "target": "u-layout-b",
+      "candidates": ["版式说明", "错误处理", "接入说明"],
+      "inputs": {"unit_ref": "u-layout-b", "summary": "页眉页脚的位置、纸张方向以及图注与正文间距", "chapters": ["版式说明", "错误处理", "接入说明"]},
+      "context": {"placement_constraints": {"版式说明": ["版式说明"], "错误处理": ["错误处理"], "接入说明": ["接入说明"]}},
+      "expect": {"unit_ref": "u-layout-b", "chapter_path": ["版式说明"]},
+      "note": "版式主题换顺序再测；引用必须原样回带。"
     },
     {
       "case_id": "advisory-keeps-finding-ref",

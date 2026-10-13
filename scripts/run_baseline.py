@@ -100,7 +100,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         default=None,
         help=(
             "给全部模型档决策点统一设的置信度门槛（0~1）；缺省不覆盖，用目录/部署默认。"
-            " 无置信度网关可用0配合--no-save做实验，不能替代生产准入；单点用--routing，二者互斥"
+            " 缺失置信度仍待确认；章节放置可用--routing配置独立校验，二者互斥"
         ),
     )
     parser.add_argument("--no-save", action="store_true", help="只打印结论，不写报告")
@@ -181,7 +181,7 @@ def main(argv: list[str] | None = None) -> int:
         sys.path.insert(0, str(ROOT))
 
     # 延迟导入：必须在上面把 ``src`` 与仓库根放进 ``sys.path`` 之后才成立。
-    from docfidelity.agents import BASELINE_FILENAME, run_baseline, save_report
+    from docfidelity.agents import BASELINE_FILENAME, endpoint_digest, run_baseline, save_report
     from server.settings import ServerSettings
 
     args = _parse_args(argv)
@@ -189,6 +189,7 @@ def main(argv: list[str] | None = None) -> int:
     settings = ServerSettings()
     model = args.model or settings.model_name or ""
     base_url = args.base_url or settings.model_base_url or ""
+    endpoint_fingerprint = endpoint_digest(base_url)
 
     cases = _load_cases(args.cases)
     # 密钥与 `session_factory_from` 同一处来源、同一步取出：脚本是**部署侧**入口，
@@ -203,7 +204,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if not adapter.available():
         source = "自定义样本集" if args.cases else f"内置样本集（{len(cases)} 条）"
-        print(f"模型不可用：model={model!r} base_url={base_url!r}；{source}")
+        print(f"模型不可用：model={model!r} endpoint_digest={endpoint_fingerprint}；{source}")
         print("评测没有意义——每条样本都会走规则兜底，写下去的报告会声称「模型全错」。")
         print("请先配置 DOCFIDELITY_MODEL_ENABLED / DOCFIDELITY_MODEL_BASE_URL /")
         print("DOCFIDELITY_MODEL_NAME（或加 --model / --base-url），再重跑本脚本。")
@@ -215,12 +216,13 @@ def main(argv: list[str] | None = None) -> int:
         posture = f"路由配置文件 {args.routing}"
     elif args.confidence_threshold is not None:
         posture = f"统一置信度门槛 {args.confidence_threshold}"
-    print(f"评测开始：model={model} base_url={base_url} 样本 {len(cases)} 条")
+    print(f"评测开始：model={model} endpoint_digest={endpoint_fingerprint} 样本 {len(cases)} 条")
     print(f"路由姿态：{posture}（通过率只在同一姿态下可比）")
     report = run_baseline(
         cases,
         adapter=adapter,
         model=model,
+        endpoint_digest=endpoint_fingerprint,
         config=routing,
         **(  # 只在显式给出时覆盖，避免把内核默认值抄第二份
             {} if args.max_retries is None else {"max_retries": args.max_retries}
@@ -228,6 +230,11 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     print(f"结果：{report.passed}/{report.total} 通过（{report.pass_rate:.2f}）")
+    print(
+        f"已采纳回答准确率：{report.accuracy:.2f}；回退：{report.fallback_count} 条；"
+        f"缺失置信度：{report.missing_confidence_count} 次调用"
+    )
+    print(f"累计 token：输入 {report.tokens_in}，输出 {report.tokens_out}（含重试）")
     for point, rate in sorted(report.by_point.items()):
         print(f"  {point:<32} {rate:.2f}")
     if report.uncovered:

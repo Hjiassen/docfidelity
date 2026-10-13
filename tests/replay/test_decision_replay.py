@@ -83,7 +83,12 @@ def test_a_recorded_decision_replays_through_the_model_route(case: ReplayCase) -
         job_id=SAMPLE_RUN_ID,
     )
     assert case.request is not None
-    outcome = ctx.table.resolve(DecisionRequest.model_validate(dict(case.request)), ctx)
+    request = DecisionRequest.model_validate(dict(case.request))
+    # 历史录制将单元引用放在上下文；回放时补齐现行请求的显式作用对象。
+    unit_ref = request.context.get("unit_id")
+    if not request.target and isinstance(unit_ref, str):
+        request = request.model_copy(update={"target": unit_ref})
+    outcome = ctx.table.resolve(request, ctx)
 
     assert adapter.calls, "适配层没被调到——这次回放根本没走模型路径"
     assert outcome.effective != "rule", f"落回规则档了：{outcome.reason}"

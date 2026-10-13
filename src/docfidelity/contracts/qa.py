@@ -15,6 +15,7 @@ from typing import Any, ClassVar, Final, Literal
 from pydantic import Field, model_validator
 
 from .base import FormatModel
+from .job import Decision, ModelCall
 
 RuleCategory = Literal["style", "layout", "terminology", "integrity", "trace", "spotcheck", "meta"]
 
@@ -244,6 +245,8 @@ class Report(FormatModel):
     report_id: str
     job_id: str
     generated_at: datetime
+    decisions: list[Decision] = Field(default_factory=list, description="构建采用或降级的语义决策")
+    model_calls: list[ModelCall] = Field(default_factory=list, description="支撑构建决策的调用证据")
     findings: list[Finding] = Field(default_factory=list)
     waivers: list[Waiver] = Field(default_factory=list)
     adjudications: list[Adjudication] = Field(

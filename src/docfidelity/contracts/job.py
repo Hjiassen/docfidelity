@@ -53,10 +53,10 @@ STAGE_NAMES: Final[tuple[StageName, ...]] = ("ingest", "compose", "render", "ref
 #: 阶段实现版本。**变更即强制失效历史 checkpoint**，并记录到 CHANGELOG。
 STAGE_IMPL_VERSION: Final[dict[str, int]] = {
     "ingest": 1,
-    "compose": 2,
-    "render": 4,
+    "compose": 3,
+    "render": 5,
     "refresh": 1,
-    "qa": 2,
+    "qa": 3,
 }
 
 #: 子作业的合法状态迁移表。空集合表示终态。
@@ -224,12 +224,15 @@ class Decision(FormatModel):
     reason: str | None = None
     confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     source: DecisionSource = "rule_default"
+    admission_evidence: dict[str, Any] = Field(
+        default_factory=dict, description="模型准入校验的依据与结果；不代表语义正确性或虚构的置信度"
+    )
     status: DecisionStatus = "auto"
     created_at: datetime
 
 
 class ModelCall(FormatModel):
-    """一次模型调用留痕（Tracing）。
+    """一次决策的模型调用汇总（Tracing，含全部重试）。
 
     失败时 ``ok=False`` 且 ``fallback_used=True``——这**不是**构建失败，
     只是决策降级（NFR-26 / 验收 39）。
@@ -242,6 +245,7 @@ class ModelCall(FormatModel):
     decision_point: str
     route: str = Field(description="路由目标：agent 名 / 规划器标识")
     model: str | None = None
+    attempts: int = Field(default=1, ge=1, description="实际调用次数；token 为全部尝试累计值")
     latency_ms: int | None = Field(default=None, ge=0)
     tokens_in: int | None = Field(default=None, ge=0)
     tokens_out: int | None = Field(default=None, ge=0)

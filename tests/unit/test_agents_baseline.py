@@ -360,13 +360,8 @@ def _gate(threshold: float) -> RoutingConfig:
     )
 
 
-def test_a_gateway_that_reports_no_confidence_needs_an_explicit_posture() -> None:
-    """同一样本、同一适配层，只换姿态，结论从"不可驱动"变成"可驱动"。
-
-    这是"通过率必须带姿态"的可执行形式。不报置信度的网关（OpenAI 兼容网关普遍如此）
-    在缺省门槛 0.7 下**每个点都判不达标**——那测出来的是网关，不是模型；
-    拿它去校准分级，会把全部模型档点误判成"该交给规则"。
-    """
+def test_missing_confidence_cannot_bypass_admission_with_zero_threshold() -> None:
+    """同一样本与适配层，即使门槛归零也不能冒充真实置信度。"""
     case = _case(expect={})  # 只要求"被采纳"，把判分聚焦在门槛本身
     scripted = ScriptedAdapter(
         script={
@@ -381,8 +376,8 @@ def test_a_gateway_that_reports_no_confidence_needs_an_explicit_posture() -> Non
     assert strict.by_point["dedup.semantic_duplicate"] == 0.0
 
     lenient = run_baseline((case,), adapter=scripted, config=_gate(0.0))
-    assert lenient.outcomes[0].adopted is True
-    assert lenient.by_point["dedup.semantic_duplicate"] == 1.0
+    assert lenient.outcomes[0].adopted is False
+    assert lenient.by_point["dedup.semantic_duplicate"] == 0.0
 
 
 def test_the_posture_is_part_of_the_report() -> None:
@@ -408,3 +403,104 @@ def test_the_posture_digest_reaches_the_settings_view(tmp_path: Path) -> None:
     report = run_baseline(default_cases(), adapter=NullAdapter(), model="m", config=_gate(0.0))
     status = load_status(save_report(report, tmp_path / BASELINE_FILENAME))
     assert status.routing_digest == report.routing_digest != ""
+
+
+def test_placement_baseline_covers_topics_orders_and_target_integrity() -> None:
+    cases = tuple(
+        case for case in default_cases() if case.decision_point == "placement.section_slot"
+    )
+    assert len(cases) >= 10
+    assert len({tuple(case.candidates) for case in cases}) >= 4
+    assert len({tuple(case.expect["chapter_path"]) for case in cases}) >= 5
+    for case in cases:
+        assert case.inputs["unit_ref"] == case.expect["unit_ref"] == case.target
+        constraints = case.context["placement_constraints"]
+        assert all(label in constraints for label in case.candidates)
+        assert case.expect["chapter_path"] in constraints.values()
+
+
+def test_independent_baseline_reports_actual_none_confidence_and_usage(tmp_path: Path) -> None:
+    case = _case(
+        decision_point="placement.section_slot",
+        target="u1",
+        candidates=["甲", "乙"],
+        inputs={"unit_ref": "u1", "chapters": ["甲", "乙"]},
+        context={"placement_constraints": {"甲": ["甲"], "乙": ["乙"]}},
+        expect={"unit_ref": "u1", "chapter_path": ["乙"]},
+    )
+    adapter = ScriptedAdapter(
+        script={
+            "placement.section_slot": AdapterOutcome(
+                ok=True, payload=dict(case.expect), confidence=None, tokens_in=12, tokens_out=5
+            )
+        }
+    )
+    config = RoutingConfig(
+        decision_points={
+            "placement.section_slot": DecisionPointRoute.load(
+                {"admission_policy": "independent_validation"}
+            )
+        }
+    )
+    report = run_baseline(
+        (case,), adapter=adapter, model="m", config=config, endpoint_digest="digest"
+    )
+    assert report.by_point["placement.section_slot"] == 1.0
+    assert report.accuracy == 1.0
+    assert report.fallback_count == 0
+    assert report.missing_confidence_count == 1
+    assert (report.tokens_in, report.tokens_out) == (12, 5)
+    assert report.outcomes[0].confidence is None
+    assert report.outcomes[0].admission_evidence["accepted"] is True
+    status = load_status(save_report(report, tmp_path / BASELINE_FILENAME))
+    assert status.endpoint_digest == "digest"
+
+
+def test_safety_validation_does_not_make_semantically_wrong_placement_pass() -> None:
+    case = _case(
+        decision_point="placement.section_slot",
+        target="u1",
+        candidates=["甲", "乙"],
+        context={"placement_constraints": {"甲": ["甲"], "乙": ["乙"]}},
+        expect={"unit_ref": "u1", "chapter_path": ["乙"]},
+    )
+    adapter = ScriptedAdapter(
+        script={
+            "placement.section_slot": AdapterOutcome(
+                ok=True, payload={"unit_ref": "u1", "chapter_path": ["甲"]}, confidence=None
+            )
+        }
+    )
+    config = RoutingConfig(
+        decision_points={
+            "placement.section_slot": DecisionPointRoute.load(
+                {"admission_policy": "independent_validation"}
+            )
+        }
+    )
+    report = run_baseline((case,), adapter=adapter, config=config)
+    assert report.outcomes[0].adopted is True
+    assert report.outcomes[0].passed is False
+    assert report.by_point["placement.section_slot"] == 0.0
+
+
+def test_policy_changes_the_baseline_posture_fingerprint() -> None:
+    plain = run_baseline(default_cases(), adapter=NullAdapter())
+    config = RoutingConfig(
+        decision_points={
+            "placement.section_slot": DecisionPointRoute.load(
+                {"admission_policy": "independent_validation"}
+            )
+        }
+    )
+    validated = run_baseline(default_cases(), adapter=NullAdapter(), config=config)
+    assert plain.routing_digest != validated.routing_digest
+
+
+def test_endpoint_identity_fingerprint_does_not_expose_the_url() -> None:
+    from docfidelity.agents.baseline import endpoint_digest
+
+    first = endpoint_digest("http://127.0.0.1:9/v1/")
+    assert first == endpoint_digest("http://127.0.0.1:9/v1")
+    assert first != endpoint_digest("http://127.0.0.1:10/v1")
+    assert "127.0.0.1" not in first

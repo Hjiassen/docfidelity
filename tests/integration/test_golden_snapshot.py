@@ -120,3 +120,18 @@ def test_the_demo_build_never_reaches_for_word(
     monkeypatch.setattr(toc, "refresh_with_office", unexpected)
     _build(tmp_path, "--only", "api-summary")
     assert _artifact(tmp_path, "api-summary").is_file()
+
+
+def test_repeated_cli_build_restores_the_persisted_event_sequence(tmp_path: Path) -> None:
+    from docfidelity.pipeline import read_events
+
+    _build(tmp_path, "--only", "api-summary")
+    paths = list((tmp_path / "jobs").glob("*/events.jsonl"))
+    assert len(paths) == 1
+    before = read_events(paths[0])
+    assert before
+    _build(tmp_path, "--only", "api-summary")
+    after = read_events(paths[0])
+    assert after[: len(before)] == before
+    assert len(after) > len(before)
+    assert [event.event_id for event in after] == list(range(1, len(after) + 1))

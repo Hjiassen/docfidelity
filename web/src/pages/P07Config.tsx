@@ -54,10 +54,10 @@ import {
   FORMAT_VERSION,
   MappingSection,
   PaginationSection,
-  RoutingSection,
   RuleSetsSection,
   TerminologySection,
 } from "./p07Sections";
+import { RoutingSection } from "./p07RoutingSection";
 
 /** "这个项目还没有配置"的服务端错误码（`Services.get_config`）。 */
 const CONFIG_MISSING = "E_CONFIG_INVALID";
