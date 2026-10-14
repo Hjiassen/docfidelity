@@ -13,6 +13,9 @@
 | `job/` | 作业、阶段、事件、决策留痕 | Stable |
 | `qa/` | 门禁规则、判定、豁免、报告 | Evolving |
 | `config/` | 项目配置 | Stable |
+| `effective-template/` | V2 导入、保留项选择、冻结有效模板与 FormatBindings | Beta |
+
+V2 使用独立有效模板规范，旧 `template/` 与 `profile/` 在 M5 删除前继续用于兼容链路回归。V2 ContentIR 可省略旧 `profile_id`，格式全部由冻结绑定决定。
 
 ## schema.json 是生成物，不要手工编辑
 

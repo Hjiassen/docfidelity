@@ -1,0 +1,632 @@
+{
+  "$defs": {
+    "CleanupReport": {
+      "additionalProperties": false,
+      "properties": {
+        "cleared_text_containers": {
+          "title": "Cleared Text Containers",
+          "type": "integer"
+        },
+        "excluded_objects": {
+          "title": "Excluded Objects",
+          "type": "integer"
+        },
+        "fixed_assets": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Fixed Assets",
+          "type": "array"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "removed_parts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Removed Parts",
+          "type": "array"
+        },
+        "retained_parts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Retained Parts",
+          "type": "array"
+        }
+      },
+      "required": [
+        "removed_parts",
+        "retained_parts",
+        "cleared_text_containers",
+        "excluded_objects",
+        "fixed_assets"
+      ],
+      "title": "CleanupReport",
+      "type": "object"
+    },
+    "FormatBindings": {
+      "additionalProperties": false,
+      "properties": {
+        "body": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Body"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "heading": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Heading",
+          "type": "object"
+        },
+        "image": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Image"
+        },
+        "insertion_marker": {
+          "default": "df:insert:content",
+          "title": "Insertion Marker",
+          "type": "string"
+        },
+        "insertion_part": {
+          "default": "word/document.xml",
+          "title": "Insertion Part",
+          "type": "string"
+        },
+        "list_paragraph": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "List Paragraph"
+        },
+        "tables": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tables",
+          "type": "array"
+        }
+      },
+      "title": "FormatBindings",
+      "type": "object"
+    },
+    "FrozenPrototype": {
+      "additionalProperties": false,
+      "properties": {
+        "columns": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Columns"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "heading_level": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Heading Level"
+        },
+        "kind": {
+          "enum": [
+            "heading",
+            "body",
+            "list",
+            "table",
+            "image"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "prototype_id": {
+          "title": "Prototype Id",
+          "type": "string"
+        },
+        "row_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Row Path"
+        },
+        "source_node_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Node Id"
+        }
+      },
+      "required": [
+        "prototype_id",
+        "kind",
+        "path"
+      ],
+      "title": "FrozenPrototype",
+      "type": "object"
+    },
+    "FrozenVariable": {
+      "additionalProperties": false,
+      "properties": {
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "marker": {
+          "title": "Marker",
+          "type": "string"
+        },
+        "part": {
+          "title": "Part",
+          "type": "string"
+        },
+        "required": {
+          "title": "Required",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "key",
+        "part",
+        "marker",
+        "required"
+      ],
+      "title": "FrozenVariable",
+      "type": "object"
+    },
+    "ImportDraft": {
+      "additionalProperties": false,
+      "properties": {
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/TemplateCandidate"
+          },
+          "title": "Candidates",
+          "type": "array"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "import_id": {
+          "title": "Import Id",
+          "type": "string"
+        },
+        "nodes": {
+          "items": {
+            "$ref": "#/$defs/StructureNode"
+          },
+          "title": "Nodes",
+          "type": "array"
+        },
+        "source_sha256": {
+          "title": "Source Sha256",
+          "type": "string"
+        },
+        "source_size": {
+          "title": "Source Size",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "import_id",
+        "source_sha256",
+        "source_size",
+        "nodes",
+        "candidates"
+      ],
+      "title": "ImportDraft",
+      "type": "object"
+    },
+    "SelectionRange": {
+      "additionalProperties": false,
+      "properties": {
+        "end_node_id": {
+          "title": "End Node Id",
+          "type": "string"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "cover",
+            "toc",
+            "body",
+            "header",
+            "footer"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "start_node_id": {
+          "title": "Start Node Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "start_node_id",
+        "end_node_id"
+      ],
+      "title": "SelectionRange",
+      "type": "object"
+    },
+    "StructureKind": {
+      "enum": [
+        "paragraph",
+        "table",
+        "image",
+        "object",
+        "container"
+      ],
+      "title": "StructureKind",
+      "type": "string"
+    },
+    "StructureNode": {
+      "additionalProperties": false,
+      "properties": {
+        "block_index": {
+          "title": "Block Index",
+          "type": "integer"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "heading_level": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Heading Level"
+        },
+        "kind": {
+          "$ref": "#/$defs/StructureKind"
+        },
+        "node_id": {
+          "title": "Node Id",
+          "type": "string"
+        },
+        "part": {
+          "title": "Part",
+          "type": "string"
+        },
+        "supported": {
+          "default": true,
+          "title": "Supported",
+          "type": "boolean"
+        },
+        "text_preview": {
+          "default": "",
+          "title": "Text Preview",
+          "type": "string"
+        },
+        "top_level": {
+          "default": false,
+          "title": "Top Level",
+          "type": "boolean"
+        },
+        "xpath": {
+          "title": "Xpath",
+          "type": "string"
+        }
+      },
+      "required": [
+        "node_id",
+        "part",
+        "xpath",
+        "block_index",
+        "kind"
+      ],
+      "title": "StructureNode",
+      "type": "object"
+    },
+    "TemplateCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": {
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "cover",
+            "toc",
+            "body",
+            "header",
+            "footer"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "ranges": {
+          "items": {
+            "$ref": "#/$defs/SelectionRange"
+          },
+          "title": "Ranges",
+          "type": "array"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "detected",
+            "unrecognized",
+            "unsupported"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "kind",
+        "status",
+        "reason"
+      ],
+      "title": "TemplateCandidate",
+      "type": "object"
+    },
+    "TemplateSelection": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmed_absent": {
+          "items": {
+            "enum": [
+              "cover",
+              "toc",
+              "body",
+              "header",
+              "footer"
+            ],
+            "type": "string"
+          },
+          "title": "Confirmed Absent",
+          "type": "array"
+        },
+        "fixed_assets": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Fixed Assets",
+          "type": "array"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "import_id": {
+          "title": "Import Id",
+          "type": "string"
+        },
+        "ranges": {
+          "items": {
+            "$ref": "#/$defs/SelectionRange"
+          },
+          "title": "Ranges",
+          "type": "array"
+        },
+        "source_sha256": {
+          "title": "Source Sha256",
+          "type": "string"
+        },
+        "variables": {
+          "items": {
+            "$ref": "#/$defs/VariableMapping"
+          },
+          "title": "Variables",
+          "type": "array"
+        }
+      },
+      "required": [
+        "import_id",
+        "source_sha256"
+      ],
+      "title": "TemplateSelection",
+      "type": "object"
+    },
+    "TemplateVersion": {
+      "additionalProperties": false,
+      "properties": {
+        "cleanup_report": {
+          "$ref": "#/$defs/CleanupReport"
+        },
+        "content_hash": {
+          "title": "Content Hash",
+          "type": "string"
+        },
+        "file_hashes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "File Hashes",
+          "type": "object"
+        },
+        "format_bindings": {
+          "$ref": "#/$defs/FormatBindings"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "prototypes": {
+          "items": {
+            "$ref": "#/$defs/FrozenPrototype"
+          },
+          "title": "Prototypes",
+          "type": "array"
+        },
+        "selection": {
+          "$ref": "#/$defs/TemplateSelection"
+        },
+        "source_sha256": {
+          "title": "Source Sha256",
+          "type": "string"
+        },
+        "template_id": {
+          "title": "Template Id",
+          "type": "string"
+        },
+        "variables": {
+          "items": {
+            "$ref": "#/$defs/FrozenVariable"
+          },
+          "title": "Variables",
+          "type": "array"
+        },
+        "version": {
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "template_id",
+        "version",
+        "name",
+        "source_sha256",
+        "selection",
+        "variables",
+        "prototypes",
+        "format_bindings",
+        "cleanup_report",
+        "file_hashes",
+        "content_hash"
+      ],
+      "title": "TemplateVersion",
+      "type": "object"
+    },
+    "VariableMapping": {
+      "additionalProperties": false,
+      "properties": {
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "node_id": {
+          "title": "Node Id",
+          "type": "string"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "key",
+        "node_id"
+      ],
+      "title": "VariableMapping",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "docfidelity contracts: effective-template",
+  "x-contract-family": "effective-template",
+  "x-contract-models": [
+    "CleanupReport",
+    "FormatBindings",
+    "FrozenPrototype",
+    "FrozenVariable",
+    "ImportDraft",
+    "SelectionRange",
+    "StructureNode",
+    "TemplateCandidate",
+    "TemplateSelection",
+    "TemplateVersion",
+    "VariableMapping"
+  ]
+}
