@@ -54,6 +54,7 @@ web/vite.config.ts.timestamp-*
 
 # ---- 协作工具的项目数据（记忆 / 临时脚本），入库无意义 ----
 .workbuddy/
+.superpowers/
 
 # ---- 编辑器 / 系统 ----
 .idea/
