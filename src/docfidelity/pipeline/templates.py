@@ -1,4 +1,4 @@
-"""模板用例（DD-7.1 / DD-13.1）——``server`` 与 ``registry`` 之间的**唯一**接缝。
+"""V1 模板用例（DD-7.1 / DD-13.1）；V2 门面位于 ``template_imports``。
 
 覆盖三件事，都是"服务端要模板、但不许认识 ``registry``"这件事的不同侧面：
 
@@ -16,7 +16,7 @@ DD-13.1 对 ``server`` 的硬约束是"不得 import ``ooxml`` / ``registry`` �
 但它一行都不该认识 ``registry``。
 
 本模块因此与 :mod:`.decisions` 对称：``decisions`` 是作业级决策协议
-的模块，本模块是唯一认识 ``registry`` 的模块——两条都由 ``.importlinter`` 的 forbidden
+的模块，本模块承接 V1 模板库用例——边界由 ``.importlinter`` 的 forbidden
 契约锁住（``pipeline-agents-seam`` / ``pipeline-registry-seam``）。
 
 这一层**不**做什么

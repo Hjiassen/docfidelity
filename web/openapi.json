@@ -767,6 +767,20 @@
         "title": "BlockLocator",
         "type": "object"
       },
+      "Body_create_import_api_v2_template_imports_post": {
+        "properties": {
+          "file": {
+            "format": "binary",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_create_import_api_v2_template_imports_post",
+        "type": "object"
+      },
       "Body_create_upload_api_v1_uploads_post": {
         "properties": {
           "file": {
@@ -1091,6 +1105,59 @@
         "title": "CleanupPlanOut",
         "type": "object"
       },
+      "CleanupReport": {
+        "additionalProperties": false,
+        "properties": {
+          "cleared_numbering_labels": {
+            "default": 0,
+            "title": "Cleared Numbering Labels",
+            "type": "integer"
+          },
+          "cleared_text_containers": {
+            "title": "Cleared Text Containers",
+            "type": "integer"
+          },
+          "excluded_objects": {
+            "title": "Excluded Objects",
+            "type": "integer"
+          },
+          "fixed_assets": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Fixed Assets",
+            "type": "array"
+          },
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "removed_parts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Removed Parts",
+            "type": "array"
+          },
+          "retained_parts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Retained Parts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "removed_parts",
+          "retained_parts",
+          "cleared_text_containers",
+          "excluded_objects",
+          "fixed_assets"
+        ],
+        "title": "CleanupReport",
+        "type": "object"
+      },
       "CleanupRequest": {
         "additionalProperties": false,
         "properties": {
@@ -1166,6 +1233,171 @@
           "created_at"
         ],
         "title": "ConfigVersionOut",
+        "type": "object"
+      },
+      "ContentIR": {
+        "additionalProperties": false,
+        "description": "一次构建产出的完整内容 IR。\n\n它同时是**可导出的对外格式**：``docs/spec/content-ir/`` 下有对应 JSON Schema。",
+        "properties": {
+          "doc_key": {
+            "description": "项目内的文档条目键，如 'detail' / 'testplan'",
+            "title": "Doc Key",
+            "type": "string"
+          },
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "profile_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "V1 档案引用；V2 无需提供",
+            "title": "Profile Id"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "source_digests": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "事实源标识 -> 内容摘要，用于判定输入是否变化",
+            "title": "Source Digests",
+            "type": "object"
+          },
+          "template_ref": {
+            "description": "生成所用的模板包引用 template_id@version",
+            "title": "Template Ref",
+            "type": "string"
+          },
+          "units": {
+            "items": {
+              "$ref": "#/components/schemas/ContentUnit"
+            },
+            "title": "Units",
+            "type": "array"
+          },
+          "unresolved": {
+            "description": "未能解析的引用（slot_id / trace key），进入裁决队列",
+            "items": {
+              "type": "string"
+            },
+            "title": "Unresolved",
+            "type": "array"
+          }
+        },
+        "required": [
+          "project_id",
+          "doc_key",
+          "template_ref"
+        ],
+        "title": "ContentIR",
+        "type": "object"
+      },
+      "ContentUnit": {
+        "additionalProperties": false,
+        "description": "IR 的最小单元。可嵌套（``children``），形成章节树。",
+        "properties": {
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/ContentUnit"
+            },
+            "title": "Children",
+            "type": "array"
+          },
+          "fields": {
+            "additionalProperties": true,
+            "description": "体例声明的字段。table 见 TableData，figure/screenshot 见 FigureData",
+            "title": "Fields",
+            "type": "object"
+          },
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "heading 专用层级",
+            "title": "Level"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OriginRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "正文文本；表格 / 图片单元为 None",
+            "title": "Text"
+          },
+          "trace": {
+            "description": "领域对象 key 列表，构成追溯边",
+            "items": {
+              "type": "string"
+            },
+            "title": "Trace",
+            "type": "array"
+          },
+          "type": {
+            "enum": [
+              "heading",
+              "para",
+              "bullets",
+              "numbered",
+              "table",
+              "figure",
+              "screenshot",
+              "trace",
+              "pagebreak",
+              "block_ref"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "unit_id": {
+            "description": "稳定 ID，由投影路径派生；必须确定性可复现",
+            "title": "Unit Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "unit_id",
+          "type"
+        ],
+        "title": "ContentUnit",
         "type": "object"
       },
       "ContractSummaryOut": {
@@ -2646,6 +2878,22 @@
         "title": "FieldSchema",
         "type": "object"
       },
+      "FinalizeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "FinalizeRequest",
+        "type": "object"
+      },
       "Finding": {
         "additionalProperties": false,
         "description": "一条判定结果。\n\n``finding_id`` 为什么是一个字段\n------------------------------\n界面要能**指认**一条判定才能对它提交裁决（``POST /findings/{fid}/decisions``），\n而在那之前 ``Finding`` 只有内容、没有身份——调用方唯一能用的坐标是\"报告里第几条\"，\n那等于让前端自己算一个标识（DD-14.3 禁止的\"前端推断\"），而且一旦有人重排\n``findings``，\"第 3 条\"就悄悄指向了另一条规则。\n\n标识由 ``qa`` 在产出报告时赋值（``<报告标识>@<序号>``），故它**不参与**任何判定：\n是用户级可选项，缺失时接口层按\"这条判定不可寻址\"处理，而不是回退到下标。",
@@ -2740,6 +2988,271 @@
           "message"
         ],
         "title": "Finding",
+        "type": "object"
+      },
+      "FormatBindings": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "heading": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Heading",
+            "type": "object"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image"
+          },
+          "insertion_marker": {
+            "default": "df:insert:content",
+            "title": "Insertion Marker",
+            "type": "string"
+          },
+          "insertion_part": {
+            "default": "word/document.xml",
+            "title": "Insertion Part",
+            "type": "string"
+          },
+          "list_paragraph": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "List Paragraph"
+          },
+          "tables": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tables",
+            "type": "array"
+          },
+          "toc": {
+            "items": {
+              "$ref": "#/components/schemas/FrozenToc"
+            },
+            "title": "Toc",
+            "type": "array"
+          }
+        },
+        "title": "FormatBindings",
+        "type": "object"
+      },
+      "FormatSelection": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "default": true,
+            "title": "Body",
+            "type": "boolean"
+          },
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "heading": {
+            "default": true,
+            "title": "Heading",
+            "type": "boolean"
+          },
+          "numbering": {
+            "default": true,
+            "title": "Numbering",
+            "type": "boolean"
+          },
+          "page_setup": {
+            "default": true,
+            "title": "Page Setup",
+            "type": "boolean"
+          },
+          "tables": {
+            "default": true,
+            "title": "Tables",
+            "type": "boolean"
+          }
+        },
+        "title": "FormatSelection",
+        "type": "object"
+      },
+      "FrozenPrototype": {
+        "additionalProperties": false,
+        "properties": {
+          "column_policy": {
+            "default": "fixed",
+            "enum": [
+              "fixed",
+              "flexible"
+            ],
+            "title": "Column Policy",
+            "type": "string"
+          },
+          "columns": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Columns"
+          },
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "heading_level": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heading Level"
+          },
+          "kind": {
+            "enum": [
+              "heading",
+              "body",
+              "list",
+              "table",
+              "image"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "prototype_id": {
+            "title": "Prototype Id",
+            "type": "string"
+          },
+          "row_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row Path"
+          },
+          "source_node_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Node Id"
+          }
+        },
+        "required": [
+          "prototype_id",
+          "kind",
+          "path"
+        ],
+        "title": "FrozenPrototype",
+        "type": "object"
+      },
+      "FrozenToc": {
+        "additionalProperties": false,
+        "properties": {
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "instruction": {
+            "title": "Instruction",
+            "type": "string"
+          },
+          "marker": {
+            "title": "Marker",
+            "type": "string"
+          },
+          "part": {
+            "title": "Part",
+            "type": "string"
+          }
+        },
+        "required": [
+          "part",
+          "marker",
+          "instruction"
+        ],
+        "title": "FrozenToc",
+        "type": "object"
+      },
+      "FrozenVariable": {
+        "additionalProperties": false,
+        "properties": {
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "marker": {
+            "title": "Marker",
+            "type": "string"
+          },
+          "part": {
+            "title": "Part",
+            "type": "string"
+          },
+          "required": {
+            "title": "Required",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "part",
+          "marker",
+          "required"
+        ],
+        "title": "FrozenVariable",
         "type": "object"
       },
       "GenreSpec": {
@@ -2853,6 +3366,96 @@
           "ilvl"
         ],
         "title": "HeadingBinding",
+        "type": "object"
+      },
+      "ImportDraft": {
+        "additionalProperties": false,
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/TemplateCandidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "import_id": {
+            "title": "Import Id",
+            "type": "string"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/StructureNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "source_sha256": {
+            "title": "Source Sha256",
+            "type": "string"
+          },
+          "source_size": {
+            "title": "Source Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "import_id",
+          "source_sha256",
+          "source_size",
+          "nodes",
+          "candidates"
+        ],
+        "title": "ImportDraft",
+        "type": "object"
+      },
+      "ImportSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "draft": {
+            "$ref": "#/components/schemas/ImportDraft"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "import_id": {
+            "title": "Import Id",
+            "type": "string"
+          },
+          "revision": {
+            "minimum": 1.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "selection": {
+            "$ref": "#/components/schemas/TemplateSelection"
+          },
+          "template_id": {
+            "title": "Template Id",
+            "type": "string"
+          },
+          "versions": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Versions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "import_id",
+          "template_id",
+          "revision",
+          "filename",
+          "draft",
+          "selection"
+        ],
+        "title": "ImportSnapshot",
         "type": "object"
       },
       "ImportStageOut": {
@@ -3788,6 +4391,45 @@
           }
         },
         "title": "NumberingContract",
+        "type": "object"
+      },
+      "OriginRef": {
+        "additionalProperties": false,
+        "description": "内容单元的来源事实引用。\n\n追溯链的最后一跳：``ContentUnit.trace`` 给出领域对象 key，\n``OriginRef`` 给出该对象在事实源中的落点与可信度。",
+        "properties": {
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "locator": {
+            "description": "源内定位，如 'paths./api/x.get' 或 'Sheet1!A12'",
+            "title": "Locator",
+            "type": "string"
+          },
+          "priority": {
+            "default": 0,
+            "description": "冲突裁决优先级，越大越优先",
+            "title": "Priority",
+            "type": "integer"
+          },
+          "source": {
+            "description": "事实源标识，如 'openapi' / 'xlsx:用例表'",
+            "title": "Source",
+            "type": "string"
+          },
+          "verified": {
+            "default": true,
+            "description": "是否已通过该源的接入校验",
+            "title": "Verified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "source",
+          "locator"
+        ],
+        "title": "OriginRef",
         "type": "object"
       },
       "OutlineSkeleton": {
@@ -5198,6 +5840,34 @@
         "title": "RegisteredTemplateOut",
         "type": "object"
       },
+      "RenderRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "assets": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "图片逻辑名到 base64 位图",
+            "title": "Assets",
+            "type": "object"
+          },
+          "content": {
+            "$ref": "#/components/schemas/ContentIR"
+          },
+          "variables": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Variables",
+            "type": "object"
+          }
+        },
+        "required": [
+          "content"
+        ],
+        "title": "RenderRequest",
+        "type": "object"
+      },
       "Report": {
         "additionalProperties": false,
         "description": "门禁报告。\n\n``verdict`` 的算法由服务端给出，前端**不得推断**（唯一实现 = :func:`verdict_of`）：\n\n* 存在未豁免的 ``blocker`` -> ``blocked``\n* 否则存在未豁免的 ``major`` / ``minor`` -> ``warning``\n* 否则 -> ``pass``\n\n``skipped`` 为什么是一个字段\n---------------------------\n\"跳过了哪几条规则、因为缺哪项能力\"原本只写在 ``summary`` 那句散文里。\n一旦需要**重算**摘要（人工裁决之后必须重算，否则报告自相矛盾），散文里的话就\n提取不出来了——于是\"跳过\"这条信息会在第一次裁决后静默消失。做成字段之后，\n重算只需 :meth:`recompute`，而\"跳过\"作为数据可被查、可被断言。",
@@ -5761,6 +6431,42 @@
           "margins"
         ],
         "title": "SectionSpec",
+        "type": "object"
+      },
+      "SelectionRange": {
+        "additionalProperties": false,
+        "properties": {
+          "end_node_id": {
+            "title": "End Node Id",
+            "type": "string"
+          },
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "cover",
+              "toc",
+              "body",
+              "header",
+              "footer"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "start_node_id": {
+            "title": "Start Node Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "start_node_id",
+          "end_node_id"
+        ],
+        "title": "SelectionRange",
         "type": "object"
       },
       "SettingsPatch": {
@@ -6503,6 +7209,81 @@
         "title": "StagingResponse",
         "type": "object"
       },
+      "StructureKind": {
+        "enum": [
+          "paragraph",
+          "table",
+          "image",
+          "object",
+          "container"
+        ],
+        "title": "StructureKind",
+        "type": "string"
+      },
+      "StructureNode": {
+        "additionalProperties": false,
+        "properties": {
+          "block_index": {
+            "title": "Block Index",
+            "type": "integer"
+          },
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "heading_level": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heading Level"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/StructureKind"
+          },
+          "node_id": {
+            "title": "Node Id",
+            "type": "string"
+          },
+          "part": {
+            "title": "Part",
+            "type": "string"
+          },
+          "supported": {
+            "default": true,
+            "title": "Supported",
+            "type": "boolean"
+          },
+          "text_preview": {
+            "default": "",
+            "title": "Text Preview",
+            "type": "string"
+          },
+          "top_level": {
+            "default": false,
+            "title": "Top Level",
+            "type": "boolean"
+          },
+          "xpath": {
+            "title": "Xpath",
+            "type": "string"
+          }
+        },
+        "required": [
+          "node_id",
+          "part",
+          "xpath",
+          "block_index",
+          "kind"
+        ],
+        "title": "StructureNode",
+        "type": "object"
+      },
       "StyleContract": {
         "additionalProperties": false,
         "description": "单个样式的承诺。对应 ``w:styles`` 中一个 ``w:style``。",
@@ -6849,6 +7630,59 @@
         "title": "TableStylePr",
         "type": "object"
       },
+      "TemplateCandidate": {
+        "additionalProperties": false,
+        "properties": {
+          "candidate_id": {
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "cover",
+              "toc",
+              "body",
+              "header",
+              "footer"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "ranges": {
+            "items": {
+              "$ref": "#/components/schemas/SelectionRange"
+            },
+            "title": "Ranges",
+            "type": "array"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "detected",
+              "unrecognized",
+              "unsupported"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "candidate_id",
+          "kind",
+          "status",
+          "reason"
+        ],
+        "title": "TemplateCandidate",
+        "type": "object"
+      },
       "TemplateDeprecateRequest": {
         "additionalProperties": false,
         "properties": {
@@ -6885,6 +7719,42 @@
           "reason"
         ],
         "title": "TemplateDeprecateRequest",
+        "type": "object"
+      },
+      "TemplateDetail": {
+        "properties": {
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "current_version": {
+            "title": "Current Version",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "template_id": {
+            "title": "Template Id",
+            "type": "string"
+          },
+          "versions": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Versions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "template_id",
+          "name",
+          "current_version",
+          "versions",
+          "content_hash"
+        ],
+        "title": "TemplateDetail",
         "type": "object"
       },
       "TemplateDetailOut": {
@@ -7565,6 +8435,144 @@
         "title": "TemplateRegistrationOut",
         "type": "object"
       },
+      "TemplateSelection": {
+        "additionalProperties": false,
+        "properties": {
+          "confirmed_absent": {
+            "items": {
+              "enum": [
+                "cover",
+                "toc",
+                "body",
+                "header",
+                "footer"
+              ],
+              "type": "string"
+            },
+            "title": "Confirmed Absent",
+            "type": "array"
+          },
+          "fixed_assets": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Fixed Assets",
+            "type": "array"
+          },
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "formats": {
+            "$ref": "#/components/schemas/FormatSelection"
+          },
+          "import_id": {
+            "title": "Import Id",
+            "type": "string"
+          },
+          "ranges": {
+            "items": {
+              "$ref": "#/components/schemas/SelectionRange"
+            },
+            "title": "Ranges",
+            "type": "array"
+          },
+          "source_sha256": {
+            "title": "Source Sha256",
+            "type": "string"
+          },
+          "variables": {
+            "items": {
+              "$ref": "#/components/schemas/VariableMapping"
+            },
+            "title": "Variables",
+            "type": "array"
+          }
+        },
+        "required": [
+          "import_id",
+          "source_sha256"
+        ],
+        "title": "TemplateSelection",
+        "type": "object"
+      },
+      "TemplateVersion": {
+        "additionalProperties": false,
+        "properties": {
+          "cleanup_report": {
+            "$ref": "#/components/schemas/CleanupReport"
+          },
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "file_hashes": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "File Hashes",
+            "type": "object"
+          },
+          "format_bindings": {
+            "$ref": "#/components/schemas/FormatBindings"
+          },
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "prototypes": {
+            "items": {
+              "$ref": "#/components/schemas/FrozenPrototype"
+            },
+            "title": "Prototypes",
+            "type": "array"
+          },
+          "selection": {
+            "$ref": "#/components/schemas/TemplateSelection"
+          },
+          "source_sha256": {
+            "title": "Source Sha256",
+            "type": "string"
+          },
+          "template_id": {
+            "title": "Template Id",
+            "type": "string"
+          },
+          "variables": {
+            "items": {
+              "$ref": "#/components/schemas/FrozenVariable"
+            },
+            "title": "Variables",
+            "type": "array"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "template_id",
+          "version",
+          "name",
+          "source_sha256",
+          "selection",
+          "variables",
+          "prototypes",
+          "format_bindings",
+          "cleanup_report",
+          "file_hashes",
+          "content_hash"
+        ],
+        "title": "TemplateVersion",
+        "type": "object"
+      },
       "Terminology": {
         "additionalProperties": false,
         "description": "术语表。作用域由档案的 ``bindings.terminology_scope`` 决定。",
@@ -7835,6 +8843,35 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "VariableMapping": {
+        "additionalProperties": false,
+        "properties": {
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "node_id": {
+            "title": "Node Id",
+            "type": "string"
+          },
+          "required": {
+            "default": true,
+            "title": "Required",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "node_id"
+        ],
+        "title": "VariableMapping",
         "type": "object"
       },
       "Waiver": {
@@ -11153,6 +12190,405 @@
         "summary": "上传（仅收件）",
         "tags": [
           "uploads"
+        ]
+      }
+    },
+    "/api/v2/template-imports": {
+      "post": {
+        "operationId": "create_import_api_v2_template_imports_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_import_api_v2_template_imports_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportSnapshot"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Import",
+        "tags": [
+          "effective-templates"
+        ]
+      }
+    },
+    "/api/v2/template-imports/{import_id}": {
+      "get": {
+        "operationId": "get_import_api_v2_template_imports__import_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportSnapshot"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Import",
+        "tags": [
+          "effective-templates"
+        ]
+      }
+    },
+    "/api/v2/template-imports/{import_id}/finalize": {
+      "post": {
+        "operationId": "finalize_import_api_v2_template_imports__import_id__finalize_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "title": "Import Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinalizeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateVersion"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Finalize Import",
+        "tags": [
+          "effective-templates"
+        ]
+      }
+    },
+    "/api/v2/template-imports/{import_id}/selection": {
+      "put": {
+        "operationId": "save_selection_api_v2_template_imports__import_id__selection_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "title": "Import Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateSelection"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportSnapshot"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Selection",
+        "tags": [
+          "effective-templates"
+        ]
+      }
+    },
+    "/api/v2/templates": {
+      "get": {
+        "operationId": "list_templates_api_v2_templates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TemplateDetail"
+                  },
+                  "title": "Response List Templates Api V2 Templates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Templates",
+        "tags": [
+          "effective-templates"
+        ]
+      }
+    },
+    "/api/v2/templates/{template_id}": {
+      "get": {
+        "operationId": "template_api_v2_templates__template_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "title": "Template Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Template",
+        "tags": [
+          "effective-templates"
+        ]
+      }
+    },
+    "/api/v2/templates/{template_id}/versions/{version}": {
+      "get": {
+        "operationId": "template_version_api_v2_templates__template_id__versions__version__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "title": "Template Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateVersion"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Template Version",
+        "tags": [
+          "effective-templates"
+        ]
+      }
+    },
+    "/api/v2/templates/{template_id}/versions/{version}/render": {
+      "post": {
+        "operationId": "render_api_v2_templates__template_id__versions__version__render_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "title": "Template Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Render",
+        "tags": [
+          "effective-templates"
         ]
       }
     },

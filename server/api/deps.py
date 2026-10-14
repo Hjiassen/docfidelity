@@ -46,6 +46,7 @@ from ..jobs.payload import load_payload
 from ..services import Services
 from ..settings import ServerSettings
 from ..storage import Repository, build_repository
+from ..template_imports import TemplateImports
 
 __all__ = [
     "STAGE_PROVIDER_GROUP",
@@ -153,6 +154,7 @@ class AppState:
     repository: Repository
     runner: JobRunner
     services: Services
+    template_imports: TemplateImports
 
     @property
     def root(self) -> Path:
@@ -215,6 +217,7 @@ def build_state(
         repository=resolved_repository,
         runner=runner,
         services=services,
+        template_imports=TemplateImports(resolved_settings),
     )
 
 

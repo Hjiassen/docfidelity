@@ -1177,6 +1177,142 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/template-imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Import */
+        post: operations["create_import_api_v2_template_imports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/template-imports/{import_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Import */
+        get: operations["get_import_api_v2_template_imports__import_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/template-imports/{import_id}/finalize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Finalize Import */
+        post: operations["finalize_import_api_v2_template_imports__import_id__finalize_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/template-imports/{import_id}/selection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Save Selection */
+        put: operations["save_selection_api_v2_template_imports__import_id__selection_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Templates */
+        get: operations["list_templates_api_v2_templates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/templates/{template_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Template */
+        get: operations["template_api_v2_templates__template_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/templates/{template_id}/versions/{version}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Template Version */
+        get: operations["template_version_api_v2_templates__template_id__versions__version__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/templates/{template_id}/versions/{version}/render": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Render */
+        post: operations["render_api_v2_templates__template_id__versions__version__render_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -1733,6 +1869,14 @@ export interface components {
              */
             xpath: string;
         };
+        /** Body_create_import_api_v2_template_imports_post */
+        Body_create_import_api_v2_template_imports_post: {
+            /**
+             * File
+             * Format: binary
+             */
+            file: string;
+        };
         /** Body_create_upload_api_v1_uploads_post */
         Body_create_upload_api_v1_uploads_post: {
             /**
@@ -1908,6 +2052,29 @@ export interface components {
             /** Workspace */
             workspace?: components["schemas"]["RetainedObjectOut"][];
         };
+        /** CleanupReport */
+        CleanupReport: {
+            /**
+             * Cleared Numbering Labels
+             * @default 0
+             */
+            cleared_numbering_labels: number;
+            /** Cleared Text Containers */
+            cleared_text_containers: number;
+            /** Excluded Objects */
+            excluded_objects: number;
+            /** Fixed Assets */
+            fixed_assets: string[];
+            /**
+             * Format Version
+             * @default 1.0.0
+             */
+            format_version: string;
+            /** Removed Parts */
+            removed_parts: string[];
+            /** Retained Parts */
+            retained_parts: string[];
+        };
         /** CleanupRequest */
         CleanupRequest: {
             /**
@@ -1942,6 +2109,100 @@ export interface components {
             created_at: string;
             /** Version */
             version: number;
+        };
+        /**
+         * ContentIR
+         * @description 一次构建产出的完整内容 IR。
+         *
+         *     它同时是**可导出的对外格式**：``docs/spec/content-ir/`` 下有对应 JSON Schema。
+         */
+        ContentIR: {
+            /**
+             * Doc Key
+             * @description 项目内的文档条目键，如 'detail' / 'testplan'
+             */
+            doc_key: string;
+            /**
+             * Format Version
+             * @default 1.0.0
+             */
+            format_version: string;
+            /**
+             * Profile Id
+             * @description V1 档案引用；V2 无需提供
+             * @default null
+             */
+            profile_id: string | null;
+            /** Project Id */
+            project_id: string;
+            /**
+             * Source Digests
+             * @description 事实源标识 -> 内容摘要，用于判定输入是否变化
+             */
+            source_digests?: {
+                [key: string]: string;
+            };
+            /**
+             * Template Ref
+             * @description 生成所用的模板包引用 template_id@version
+             */
+            template_ref: string;
+            /** Units */
+            units?: components["schemas"]["ContentUnit"][];
+            /**
+             * Unresolved
+             * @description 未能解析的引用（slot_id / trace key），进入裁决队列
+             */
+            unresolved?: string[];
+        };
+        /**
+         * ContentUnit
+         * @description IR 的最小单元。可嵌套（``children``），形成章节树。
+         */
+        ContentUnit: {
+            /** Children */
+            children?: components["schemas"]["ContentUnit"][];
+            /**
+             * Fields
+             * @description 体例声明的字段。table 见 TableData，figure/screenshot 见 FigureData
+             */
+            fields?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Format Version
+             * @default 1.0.0
+             */
+            format_version: string;
+            /**
+             * Level
+             * @description heading 专用层级
+             * @default null
+             */
+            level: number | null;
+            /** @default null */
+            origin: components["schemas"]["OriginRef"] | null;
+            /**
+             * Text
+             * @description 正文文本；表格 / 图片单元为 None
+             * @default null
+             */
+            text: string | null;
+            /**
+             * Trace
+             * @description 领域对象 key 列表，构成追溯边
+             */
+            trace?: string[];
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "heading" | "para" | "bullets" | "numbered" | "table" | "figure" | "screenshot" | "trace" | "pagebreak" | "block_ref";
+            /**
+             * Unit Id
+             * @description 稳定 ID，由投影路径派生；必须确定性可复现
+             */
+            unit_id: string;
         };
         /**
          * ContractSummaryOut
@@ -2831,6 +3092,11 @@ export interface components {
              */
             values?: string[] | null;
         };
+        /** FinalizeRequest */
+        FinalizeRequest: {
+            /** Name */
+            name: string;
+        };
         /**
          * Finding
          * @description 一条判定结果。
@@ -2887,6 +3153,132 @@ export interface components {
             suggestion?: string | null;
             /** Waiver Id */
             waiver_id?: string | null;
+        };
+        /** FormatBindings */
+        FormatBindings: {
+            /** Body */
+            body?: string | null;
+            /**
+             * Format Version
+             * @default 1.0.0
+             */
+            format_version: string;
+            /** Heading */
+            heading?: {
+                [key: string]: string;
+            };
+            /** Image */
+            image?: string | null;
+            /**
+             * Insertion Marker
+             * @default df:insert:content
+             */
+            insertion_marker: string;
+            /**
+             * Insertion Part
+             * @default word/document.xml
+             */
+            insertion_part: string;
+            /** List Paragraph */
+            list_paragraph?: string | null;
+            /** Tables */
+            tables?: string[];
+            /** Toc */
+            toc?: components["schemas"]["FrozenToc"][];
+        };
+        /** FormatSelection */
+        FormatSelection: {
+            /**
+             * Body
+             * @default true
+             */
+            body: boolean;
+            /**
+             * Format Version
+             * @default 1.0.0
+             */
+            format_version: string;
+            /**
+             * Heading
+             * @default true
+             */
+            heading: boolean;
+            /**
+             * Numbering
+             * @default true
+             */
+            numbering: boolean;
+            /**
+             * Page Setup
+             * @default true
+             */
+            page_setup: boolean;
+            /**
+             * Tables
+             * @default true
+             */
+            tables: boolean;
+        };
+        /** FrozenPrototype */
+        FrozenPrototype: {
+            /**
+             * Column Policy
+             * @default fixed
+             * @enum {string}
+             */
+            column_policy: "fixed" | "flexible";
+            /** Columns */
+            columns?: number | null;
+            /**
+             * Format Version
+             * @default 1.0.0
+             */
+            format_version: string;
+            /** Heading Level */
+            heading_level?: number | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "heading" | "body" | "list" | "table" | "image";
+            /** Path */
+            path: string;
+            /** Prototype Id */
+            prototype_id: string;
+            /** Row Path */
+            row_path?: string | null;
+            /** Source Node Id */
+            source_node_id?: string | null;
+        };
+        /** FrozenToc */
+        FrozenToc: {
+            /**
+             * Format Version
+             * @default 1.0.0
+             */
+            format_version: string;
+            /** Instruction */
+            instruction: string;
+            /** Marker */
+            marker: string;
+            /** Part */
+            part: string;
+        };
+        /** FrozenVariable */
+        FrozenVariable: {
+            /**
+             * Format Version
+             * @default 1.0.0
+             */
+            format_version: string;
+            /** Key */
+            key: string;
+            /** Marker */
+            marker: string;
+            /** Part */
+            part: string;
+            /** Required */
+            required: boolean;
         };
         /**
          * GenreSpec
@@ -2946,6 +3338,39 @@ export interface components {
             num_id: number;
             /** Style Id */
             style_id: string;
+        };
+        /** ImportDraft */
+        ImportDraft: {
+            /** Candidates */
+            candidates: components["schemas"]["TemplateCandidate"][];
+            /**
+             * Format Version
+             * @default 1.0.0
+             */
+            format_version: string;
+            /** Import Id */
+            import_id: string;
+            /** Nodes */
+            nodes: components["schemas"]["StructureNode"][];
+            /** Source Sha256 */
+            source_sha256: string;
+            /** Source Size */
+            source_size: number;
+        };
+        /** ImportSnapshot */
+        ImportSnapshot: {
+            draft: components["schemas"]["ImportDraft"];
+            /** Filename */
+            filename: string;
+            /** Import Id */
+            import_id: string;
+            /** Revision */
+            revision: number;
+            selection: components["schemas"]["TemplateSelection"];
+            /** Template Id */
+            template_id: string;
+            /** Versions */
+            versions?: number[];
         };
         /**
          * ImportStageOut
@@ -3399,6 +3824,42 @@ export interface components {
             heading_bindings?: components["schemas"]["HeadingBinding"][];
             /** Num */
             num?: components["schemas"]["NumInstance"][];
+        };
+        /**
+         * OriginRef
+         * @description 内容单元的来源事实引用。
+         *
+         *     追溯链的最后一跳：``ContentUnit.trace`` 给出领域对象 key，
+         *     ``OriginRef`` 给出该对象在事实源中的落点与可信度。
+         */
+        OriginRef: {
+            /**
+             * Format Version
+             * @default 1.0.0
+             */
+            format_version: string;
+            /**
+             * Locator
+             * @description 源内定位，如 'paths./api/x.get' 或 'Sheet1!A12'
+             */
+            locator: string;
+            /**
+             * Priority
+             * @description 冲突裁决优先级，越大越优先
+             * @default 0
+             */
+            priority: number;
+            /**
+             * Source
+             * @description 事实源标识，如 'openapi' / 'xlsx:用例表'
+             */
+            source: string;
+            /**
+             * Verified
+             * @description 是否已通过该源的接入校验
+             * @default true
+             */
+            verified: boolean;
         };
         /**
          * OutlineSkeleton
@@ -4186,6 +4647,21 @@ export interface components {
             /** Version */
             version: string;
         };
+        /** RenderRequest */
+        RenderRequest: {
+            /**
+             * Assets
+             * @description 图片逻辑名到 base64 位图
+             */
+            assets?: {
+                [key: string]: string;
+            };
+            content: components["schemas"]["ContentIR"];
+            /** Variables */
+            variables?: {
+                [key: string]: string;
+            };
+        };
         /**
          * Report
          * @description 门禁报告。
@@ -4507,6 +4983,23 @@ export interface components {
             page_size: components["schemas"]["PageSize"];
             /** Start Type */
             start_type?: ("continuous" | "nextPage" | "evenPage" | "oddPage") | null;
+        };
+        /** SelectionRange */
+        SelectionRange: {
+            /** End Node Id */
+            end_node_id: string;
+            /**
+             * Format Version
+             * @default 1.0.0
+             */
+            format_version: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "cover" | "toc" | "body" | "header" | "footer";
+            /** Start Node Id */
+            start_node_id: string;
         };
         /** SettingsPatch */
         SettingsPatch: {
@@ -4902,6 +5395,45 @@ export interface components {
             total_bytes: number;
         };
         /**
+         * StructureKind
+         * @enum {string}
+         */
+        StructureKind: "paragraph" | "table" | "image" | "object" | "container";
+        /** StructureNode */
+        StructureNode: {
+            /** Block Index */
+            block_index: number;
+            /**
+             * Format Version
+             * @default 1.0.0
+             */
+            format_version: string;
+            /** Heading Level */
+            heading_level?: number | null;
+            kind: components["schemas"]["StructureKind"];
+            /** Node Id */
+            node_id: string;
+            /** Part */
+            part: string;
+            /**
+             * Supported
+             * @default true
+             */
+            supported: boolean;
+            /**
+             * Text Preview
+             * @default
+             */
+            text_preview: string;
+            /**
+             * Top Level
+             * @default false
+             */
+            top_level: boolean;
+            /** Xpath */
+            xpath: string;
+        };
+        /**
          * StyleContract
          * @description 单个样式的承诺。对应 ``w:styles`` 中一个 ``w:style``。
          */
@@ -5035,6 +5567,30 @@ export interface components {
              */
             type: "firstRow" | "lastRow" | "firstCol" | "lastCol" | "band1Vert" | "band1Horz" | "band2Vert" | "band2Horz" | "neCell" | "nwCell" | "seCell" | "swCell";
         };
+        /** TemplateCandidate */
+        TemplateCandidate: {
+            /** Candidate Id */
+            candidate_id: string;
+            /**
+             * Format Version
+             * @default 1.0.0
+             */
+            format_version: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "cover" | "toc" | "body" | "header" | "footer";
+            /** Ranges */
+            ranges?: components["schemas"]["SelectionRange"][];
+            /** Reason */
+            reason: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "detected" | "unrecognized" | "unsupported";
+        };
         /** TemplateDeprecateRequest */
         TemplateDeprecateRequest: {
             /**
@@ -5052,6 +5608,19 @@ export interface components {
              * @description 要废弃的版本号
              */
             version: string;
+        };
+        /** TemplateDetail */
+        TemplateDetail: {
+            /** Content Hash */
+            content_hash: string;
+            /** Current Version */
+            current_version: number;
+            /** Name */
+            name: string;
+            /** Template Id */
+            template_id: string;
+            /** Versions */
+            versions: number[];
         };
         /**
          * TemplateDetailOut
@@ -5414,6 +5983,56 @@ export interface components {
             /** Version */
             version: string;
         };
+        /** TemplateSelection */
+        TemplateSelection: {
+            /** Confirmed Absent */
+            confirmed_absent?: ("cover" | "toc" | "body" | "header" | "footer")[];
+            /** Fixed Assets */
+            fixed_assets?: string[];
+            /**
+             * Format Version
+             * @default 1.0.0
+             */
+            format_version: string;
+            formats?: components["schemas"]["FormatSelection"];
+            /** Import Id */
+            import_id: string;
+            /** Ranges */
+            ranges?: components["schemas"]["SelectionRange"][];
+            /** Source Sha256 */
+            source_sha256: string;
+            /** Variables */
+            variables?: components["schemas"]["VariableMapping"][];
+        };
+        /** TemplateVersion */
+        TemplateVersion: {
+            cleanup_report: components["schemas"]["CleanupReport"];
+            /** Content Hash */
+            content_hash: string;
+            /** File Hashes */
+            file_hashes: {
+                [key: string]: string;
+            };
+            format_bindings: components["schemas"]["FormatBindings"];
+            /**
+             * Format Version
+             * @default 1.0.0
+             */
+            format_version: string;
+            /** Name */
+            name: string;
+            /** Prototypes */
+            prototypes: components["schemas"]["FrozenPrototype"][];
+            selection: components["schemas"]["TemplateSelection"];
+            /** Source Sha256 */
+            source_sha256: string;
+            /** Template Id */
+            template_id: string;
+            /** Variables */
+            variables: components["schemas"]["FrozenVariable"][];
+            /** Version */
+            version: number;
+        };
         /**
          * Terminology
          * @description 术语表。作用域由档案的 ``bindings.terminology_scope`` 决定。
@@ -5554,6 +6173,23 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** VariableMapping */
+        VariableMapping: {
+            /**
+             * Format Version
+             * @default 1.0.0
+             */
+            format_version: string;
+            /** Key */
+            key: string;
+            /** Node Id */
+            node_id: string;
+            /**
+             * Required
+             * @default true
+             */
+            required: boolean;
         };
         /**
          * Waiver
@@ -7733,6 +8369,263 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UploadOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_import_api_v2_template_imports_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_create_import_api_v2_template_imports_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportSnapshot"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_import_api_v2_template_imports__import_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportSnapshot"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    finalize_import_api_v2_template_imports__import_id__finalize_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+            };
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinalizeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateVersion"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_selection_api_v2_template_imports__import_id__selection_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+            };
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplateSelection"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportSnapshot"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_templates_api_v2_templates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateDetail"][];
+                };
+            };
+        };
+    };
+    template_api_v2_templates__template_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    template_version_api_v2_templates__template_id__versions__version__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateVersion"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    render_api_v2_templates__template_id__versions__version__render_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RenderRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": string;
                 };
             };
             /** @description Validation Error */

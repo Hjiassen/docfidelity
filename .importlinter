@@ -146,7 +146,7 @@ forbidden_modules =
 allow_indirect_imports = True
 
 [importlinter:contract:pipeline-registry-seam]
-name = 与模板库的耦合只在接缝模块（server 不得碰 registry，只能经 pipeline.templates）
+name = V1 模板接缝与 V2 有效模板门面承接模板库依赖（server 只调 pipeline）
 type = forbidden
 source_modules =
     docfidelity.pipeline.artifacts

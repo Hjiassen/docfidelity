@@ -51,6 +51,7 @@ server = [
     "pydantic-settings>=2.3,<3",
     "python-multipart>=0.0.9",
     "aiofiles>=23.2,<25",
+    "pillow>=10,<12",
 ]
 dev = [
     "pytest>=8,<9",

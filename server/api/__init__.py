@@ -16,6 +16,7 @@ from . import (
     projects,
     sources,
     system,
+    template_imports,
     templates,
     uploads,
 )
@@ -29,6 +30,7 @@ ROUTERS = (
     projects.router,
     uploads.router,
     templates.router,
+    template_imports.router,
     domain_models.router,
     profiles.router,
     sources.router,
@@ -41,6 +43,7 @@ ROUTERS = (
 def register_routes(app: FastAPI) -> None:
     for router in ROUTERS:
         app.include_router(router)
+    template_imports.register_schema(app)
 
 
 def register(app: FastAPI) -> None:
