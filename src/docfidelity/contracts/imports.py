@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from .base import FormatModel
 
@@ -61,6 +61,14 @@ class VariableMapping(FormatModel):
     required: bool = True
 
 
+class FormatSelection(FormatModel):
+    page_setup: bool = True
+    heading: bool = True
+    body: bool = True
+    numbering: bool = True
+    tables: bool = True
+
+
 class TemplateSelection(FormatModel):
     import_id: str
     source_sha256: str
@@ -68,6 +76,7 @@ class TemplateSelection(FormatModel):
     variables: list[VariableMapping] = Field(default_factory=list)
     fixed_assets: list[str] = Field(default_factory=list)
     confirmed_absent: list[CandidateKind] = Field(default_factory=list)
+    formats: FormatSelection = Field(default_factory=FormatSelection)
 
 
 class FrozenVariable(FormatModel):
@@ -85,6 +94,27 @@ class FrozenPrototype(FormatModel):
     heading_level: int | None = None
     row_path: str | None = None
     columns: int | None = None
+    column_policy: Literal["fixed", "flexible"] = "fixed"
+
+    @model_validator(mode="after")
+    def validate_columns(self) -> Self:
+        if (
+            self.kind == StructureKind.TABLE.value
+            and self.column_policy == "fixed"
+            and (self.columns is None or self.columns < 1)
+        ):
+            raise ValueError("固定列原型必须声明正整数列数")
+        if self.column_policy == "flexible" and (
+            self.kind != StructureKind.TABLE.value or self.columns is not None
+        ):
+            raise ValueError("弹性列策略仅用于不声明固定列数的中性表格")
+        return self
+
+
+class FrozenToc(FormatModel):
+    part: str
+    marker: str
+    instruction: str
 
 
 class FormatBindings(FormatModel):
@@ -93,6 +123,7 @@ class FormatBindings(FormatModel):
     list_paragraph: str | None = None
     tables: list[str] = Field(default_factory=list)
     image: str | None = None
+    toc: list[FrozenToc] = Field(default_factory=list)
     insertion_part: str = "word/document.xml"
     insertion_marker: str = "df:insert:content"
 
@@ -103,6 +134,7 @@ class CleanupReport(FormatModel):
     cleared_text_containers: int
     excluded_objects: int
     fixed_assets: list[str]
+    cleared_numbering_labels: int = 0
 
 
 class TemplateVersion(FormatModel):

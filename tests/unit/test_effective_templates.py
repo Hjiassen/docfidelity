@@ -336,7 +336,7 @@ def test_body_content_control_index_and_toc_cache_are_cleaned(tmp_path: Path) ->
         document = archive.read("word/document.xml")
         assert b"OLD_TOC_CACHE" not in document
         assert b"OLD_CONTROL_METADATA" not in document
-        assert b"TOC" not in document
+        assert b"TOC" in document
 
 
 def test_unsupported_drawing_is_skipped_until_selected(tmp_path: Path) -> None:

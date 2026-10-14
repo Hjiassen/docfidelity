@@ -3,7 +3,9 @@
 from docfidelity.contracts.imports import StructureKind, StructureNode
 
 from .doc import Element, find_first, localname, paragraph_text, qn, xpath
+from .effective_clean import unsupported_content
 from .package import DOCUMENT_PART, DocxPackage
+from .styles import style_element_index
 
 _DRAWING_TAGS = frozenset(
     "drawing inline anchor extent effectExtent docPr cNvGraphicFramePr graphicFrameLocks positionH positionV align posOffset simplePos wrapNone wrapSquare wrapTight wrapThrough wrapTopAndBottom wrapPolygon start lineTo graphic graphicData pic nvPicPr cNvPr cNvPicPr picLocks blipFill blip srcRect stretch fillRect tile spPr xfrm off ext prstGeom avLst".split()
@@ -35,23 +37,35 @@ def content_roots(package: DocxPackage) -> dict[str, Element]:
     return roots
 
 
-def heading_level(paragraph: Element) -> int | None:
+def heading_level(paragraph: Element, styles: dict[str, Element] | None = None) -> int | None:
     """优先采用大纲级别，再识别内置样式标识。"""
     levels = xpath(paragraph, "./w:pPr/w:outlineLvl")
     if levels:
         value = levels[0].get(qn("w:val"), "")
         if value.isdigit() and int(value) < 9:
             return int(value) + 1
-    styles = xpath(paragraph, "./w:pPr/w:pStyle")
-    value = styles[0].get(qn("w:val"), "") if styles else ""
-    if value.lower().startswith("heading") and value[7:].isdigit():
-        return int(value[7:])
+    references = xpath(paragraph, "./w:pPr/w:pStyle")
+    value = references[0].get(qn("w:val"), "") if references else ""
+    visited: set[str] = set()
+    while value and value not in visited:
+        visited.add(value)
+        style = (styles or {}).get(value)
+        if style is not None:
+            level = xpath(style, "./w:pPr/w:outlineLvl")
+            if level:
+                raw = level[0].get(qn("w:val"), "")
+                return int(raw) + 1 if raw.isdigit() and int(raw) < 9 else None
+        if value.lower().startswith("heading") and value[7:].isdigit():
+            return int(value[7:])
+        parent = find_first(style, "w:basedOn")
+        value = parent.get(qn("w:val"), "") if parent is not None else ""
     return None
 
 
 def index_structure(package: DocxPackage) -> list[StructureNode]:
     """索引完整块及可绑定的段落、绘图与不支持对象。"""
     nodes: list[StructureNode] = []
+    styles = style_element_index(package) if package.has_part("word/styles.xml") else {}
     for part, root in content_roots(package).items():
         for block_index, block in enumerate(root):
             if block.tag == qn("w:sectPr"):
@@ -72,6 +86,7 @@ def index_structure(package: DocxPackage) -> list[StructureNode]:
                         "customXml",
                     }
                     and element is not block
+                    and not unsupported_content(element)
                 ):
                     continue
                 kind = {
@@ -90,7 +105,9 @@ def index_structure(package: DocxPackage) -> list[StructureNode]:
                         block_index=block_index,
                         kind=StructureKind(kind),
                         text_preview=paragraph_text(element)[:160] if kind == "paragraph" else "",
-                        heading_level=heading_level(element) if kind == "paragraph" else None,
+                        heading_level=heading_level(element, styles)
+                        if kind == "paragraph"
+                        else None,
                         supported=kind != "object"
                         and (kind != "image" or supported_image(element)),
                         top_level=element is block,

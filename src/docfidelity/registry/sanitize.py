@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from docfidelity.contracts.errors import EngineError, ErrorCode
 from docfidelity.contracts.imports import (
     CleanupReport,
+    FrozenToc,
     FrozenVariable,
     ImportDraft,
     TemplateSelection,
@@ -12,7 +13,6 @@ from docfidelity.contracts.imports import (
 from docfidelity.ooxml.doc import (
     Element,
     find_first,
-    localname,
     new_tree,
     qn,
     serialize,
@@ -20,7 +20,16 @@ from docfidelity.ooxml.doc import (
     xpath,
 )
 from docfidelity.ooxml.effective_clean import clean_content, clean_format, mark_container
+from docfidelity.ooxml.effective_fields import freeze_toc, safe_toc_instruction
+from docfidelity.ooxml.effective_formats import (
+    add_neutral_styles,
+    apply_content_formats,
+    clean_numbering_labels,
+    clean_theme,
+    remove_numbering,
+)
 from docfidelity.ooxml.effective_index import content_roots, locate_node
+from docfidelity.ooxml.effective_sections import reconnect_sections
 from docfidelity.ooxml.package import DOCUMENT_PART, DocxPackage, content_type_for_extension
 
 _REL_BASE = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/"
@@ -32,6 +41,7 @@ class SanitizedTemplate:
     blocks: dict[str, Element]
     variables: list[FrozenVariable]
     report: CleanupReport
+    toc: list[FrozenToc]
 
 
 def sanitize_template(
@@ -113,7 +123,26 @@ def sanitize_template(
             )
             section_rels[resolved.relationship.rel_id] = relationship.rel_id
     blocks: dict[str, Element] = {}
-    sections: list[Element] = []
+    toc: list[FrozenToc] = []
+    toc_starts: dict[tuple[str, int], tuple[int, Element]] = {}
+    toc_covered: set[tuple[str, int]] = set()
+    for span in selection.ranges:
+        if span.kind != "toc":
+            continue
+        start, end = by_id[span.start_node_id], by_id[span.end_node_id]
+        originals = list(roots[start.part])[start.block_index : end.block_index + 1]
+        instruction = safe_toc_instruction(originals)
+        marker = f"df:toc:{len(toc)}"
+        toc.append(FrozenToc(part=start.part, marker=marker, instruction=instruction))
+        wrapper = freeze_toc(
+            originals,
+            marker,
+            instruction,
+            markers=markers.get(start.part, {}),
+            images=images.get(start.part, {}),
+        )
+        toc_starts[(start.part, start.block_index)] = (end.block_index, wrapper)
+        toc_covered.update((start.part, i) for i in range(start.block_index, end.block_index + 1))
     for part, root in roots.items():
         if part != DOCUMENT_PART and part not in selected_parts:
             continue
@@ -123,9 +152,21 @@ def sanitize_template(
             else ("w:hdr" if root.tag == qn("w:hdr") else "w:ftr")
         )
         destination = sub(rebuilt, "w:body") if part == DOCUMENT_PART else rebuilt
+        breaks, final_section = (
+            reconnect_sections(
+                root,
+                {i for selected_part, i in selected if selected_part == part},
+                section_rels,
+                selection.formats,
+            )
+            if part == DOCUMENT_PART
+            else ({}, new_tree("w:sectPr"))
+        )
         for i, element in enumerate(root):
+            if (part, i) in toc_starts:
+                destination.append(toc_starts[(part, i)][1])
             selected_block = (part, i) in selected
-            if selected_block:
+            if selected_block and (part, i) not in toc_covered:
                 cleaned = clean_content(
                     element, markers=markers.get(part, {}), images=images.get(part, {})
                 )
@@ -154,44 +195,73 @@ def sanitize_template(
                     )
                     if matching is not None:
                         blocks[matching.node_id] = cleaned
-            original_sections = (
-                [element] if element.tag == qn("w:sectPr") else xpath(element, ".//w:sectPr")
-            )
-            for original in original_sections:
-                section = clean_format(original)
-                assert section is not None
-                for reference in original:
-                    if reference.tag in {qn("w:headerReference"), qn("w:footerReference")}:
-                        mapped = section_rels.get(reference.get(qn("r:id"), ""))
-                        if mapped is not None:
-                            ref = new_tree(
-                                "w:" + localname(reference),
-                                {"w:type": reference.get(qn("w:type"), "default"), "r:id": mapped},
-                            )
-                            section.insert(0, ref)
-                sections.append(section)
-                if element.tag != qn("w:sectPr"):
-                    paragraph = sub(destination, "w:p")
-                    sub(paragraph, "w:pPr").append(section)
+                        apply_content_formats(
+                            cleaned, selection.formats, heading_level=matching.heading_level
+                        )
+            if i in breaks:
+                paragraph = sub(destination, "w:p")
+                sub(paragraph, "w:pPr").append(breaks[i])
         if part == DOCUMENT_PART:
             destination.append(mark_container(new_tree("w:p"), "df:insert:content"))
-            final = sections[-1] if sections else new_tree("w:sectPr")
-            if final.getparent() is None:
-                destination.append(final)
-            else:
-                destination.append(new_tree("w:sectPr"))
+            destination.append(final_section)
         if len(destination) == 0:
             sub(destination, "w:p")
         target.add_xml_part(part, source.content_type_of(part), rebuilt)
+    cleared_numbering_labels = 0
     for role, path in (("styles", "word/styles.xml"), ("numbering", "word/numbering.xml")):
         if source.has_part(path):
             format_tree = clean_format(source.part(path).read_tree)
             if format_tree is not None:
+                if role == "styles" and not (
+                    selection.formats.body
+                    and selection.formats.heading
+                    and selection.formats.tables
+                    and selection.formats.numbering
+                ):
+                    add_neutral_styles(format_tree)
+                if role == "numbering":
+                    if not selection.formats.numbering:
+                        format_tree = new_tree("w:numbering")
+                    else:
+                        cleared_numbering_labels = clean_numbering_labels(format_tree)
+                if not selection.formats.numbering:
+                    remove_numbering(format_tree)
                 target.add_xml_part(path, source.content_type_of(path), format_tree)
                 target.attach_relationship(
                     DOCUMENT_PART, type=_REL_BASE + role, target=path.removeprefix("word/")
                 )
+    if not target.has_part("word/styles.xml"):
+        styles = new_tree("w:styles")
+        add_neutral_styles(styles)
+        target.add_xml_part(
+            "word/styles.xml",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml",
+            styles,
+        )
+        target.attach_relationship(DOCUMENT_PART, type=_REL_BASE + "styles", target="styles.xml")
+    if not target.has_part("word/numbering.xml"):
+        target.add_xml_part(
+            "word/numbering.xml",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml",
+            new_tree("w:numbering"),
+        )
+        target.attach_relationship(
+            DOCUMENT_PART, type=_REL_BASE + "numbering", target="numbering.xml"
+        )
+    for resolved in source.resolve_rels(DOCUMENT_PART, role="theme"):
+        if resolved.part is not None and not resolved.relationship.is_external:
+            theme = clean_theme(resolved.part.read_tree)
+            if theme is not None:
+                target.add_xml_part(
+                    "word/theme/theme1.xml", source.content_type_of(resolved.target_path), theme
+                )
+                target.attach_relationship(
+                    DOCUMENT_PART, type=_REL_BASE + "theme", target="theme/theme1.xml"
+                )
+                break
     settings = new_tree("w:settings")
+    if toc:
+        sub(settings, "w:updateFields", {"w:val": "true"})
     if (
         source.has_part("word/settings.xml")
         and find_first(source.part("word/settings.xml").read_tree, "w:evenAndOddHeaders")
@@ -222,5 +292,6 @@ def sanitize_template(
         cleared_text_containers=sum(n.kind == "paragraph" for n in draft.nodes),
         excluded_objects=sum(n.kind == "object" for n in draft.nodes),
         fixed_assets=selection.fixed_assets,
+        cleared_numbering_labels=cleared_numbering_labels,
     )
-    return SanitizedTemplate(target, blocks, variables, report)
+    return SanitizedTemplate(target, blocks, variables, report, toc)

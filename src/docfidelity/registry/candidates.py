@@ -11,6 +11,7 @@ from docfidelity.contracts.imports import (
     TemplateCandidate,
 )
 from docfidelity.ooxml.doc import qn, xpath
+from docfidelity.ooxml.effective_fields import toc_ranges
 from docfidelity.ooxml.effective_index import content_roots, index_structure
 from docfidelity.ooxml.package import DOCUMENT_PART, DocxPackage
 from docfidelity.platform.hashing import sha256_file
@@ -31,14 +32,11 @@ def inspect_template(source: Path, *, import_id: str) -> ImportDraft:
         cover_nodes = [n for n in top if cover_end is not None and n.block_index <= cover_end]
         if any(n.heading_level is not None for n in cover_nodes):
             cover_nodes = []
+        toc_spans = toc_ranges(body)
         toc_nodes = [
-            n
-            for n in top
-            if any(
-                "TOC" in (e.text or e.get(qn("w:instr")) or "").split()
-                for e in xpath(body[n.block_index], ".//w:instrText | .//w:fldSimple")
-            )
+            n for n in top if any(start <= n.block_index <= end for start, end in toc_spans)
         ]
+        cover_nodes = [n for n in cover_nodes if n not in toc_nodes]
         groups: list[tuple[CandidateKind, list[StructureNode]]] = [
             ("cover", cover_nodes),
             ("toc", toc_nodes),
@@ -49,6 +47,17 @@ def inspect_template(source: Path, *, import_id: str) -> ImportDraft:
                 SelectionRange(kind=kind, start_node_id=n.node_id, end_node_id=n.node_id)
                 for n in group
             ]
+            if kind == "toc":
+                by_index = {n.block_index: n for n in top}
+                ranges = [
+                    SelectionRange(
+                        kind="toc",
+                        start_node_id=by_index[start].node_id,
+                        end_node_id=by_index[end].node_id,
+                    )
+                    for start, end in toc_spans
+                    if start in by_index and end in by_index
+                ]
             candidates.append(
                 TemplateCandidate(
                     candidate_id=kind,

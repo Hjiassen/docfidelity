@@ -15,10 +15,11 @@ from docfidelity.contracts.imports import (
     TemplateSelection,
     TemplateVersion,
 )
-from docfidelity.ooxml.doc import qn, serialize, xpath
+from docfidelity.ooxml.doc import find_first, new_tree, qn, serialize, sub, xpath
 from docfidelity.ooxml.effective_bundle import effective_content_hash
 from docfidelity.ooxml.effective_bundle import load_template_version as load_template_version
 from docfidelity.ooxml.effective_clean import clean_content
+from docfidelity.ooxml.effective_formats import apply_content_formats, neutral_paragraph
 from docfidelity.ooxml.effective_index import locate_node
 from docfidelity.ooxml.package import DocxPackage
 from docfidelity.platform.hashing import canonical_json, sha256_file
@@ -36,7 +37,7 @@ def _write_prototypes(
     directory: Path,
 ) -> tuple[list[FrozenPrototype], FormatBindings]:
     prototypes: list[FrozenPrototype] = []
-    bindings = FormatBindings()
+    bindings = FormatBindings(toc=sanitized.toc)
     directory.mkdir()
     by_id = {n.node_id: n for n in draft.nodes}
     body_positions: set[tuple[str, int]] = set()
@@ -57,6 +58,7 @@ def _write_prototypes(
         empty = clean_content(original, markers={}, images={})
         if empty is None:
             continue
+        apply_content_formats(empty, selection.formats, heading_level=node.heading_level)
         for section in xpath(empty, ".//w:sectPr"):
             parent = section.getparent()
             assert parent is not None
@@ -113,6 +115,75 @@ def _write_prototypes(
                 heading_level=node.heading_level,
             )
         )
+    if not selection.formats.heading:
+        for level in range(1, 10):
+            identifier = f"neutral-heading-{level}"
+            relative = f"prototypes/{identifier}.xml"
+            paragraph = new_tree("w:p")
+            sub(sub(paragraph, "w:r"), "w:t")
+            neutral_paragraph(paragraph, heading_level=level)
+            (directory.parent / relative).write_bytes(serialize(paragraph))
+            prototypes.append(
+                FrozenPrototype(
+                    prototype_id=identifier, kind="heading", path=relative, heading_level=level
+                )
+            )
+            bindings.heading[level] = identifier
+    if not selection.formats.body or not selection.formats.numbering:
+        neutral = new_tree("w:p")
+        sub(sub(neutral, "w:r"), "w:t")
+        neutral_paragraph(neutral)
+        if not selection.formats.body:
+            identifier = "neutral-body"
+            relative = f"prototypes/{identifier}.xml"
+            (directory.parent / relative).write_bytes(serialize(neutral))
+            prototypes.append(FrozenPrototype(prototype_id=identifier, kind="body", path=relative))
+            bindings.body = identifier
+        identifier = "neutral-list"
+        relative = f"prototypes/{identifier}.xml"
+        (directory.parent / relative).write_bytes(serialize(neutral))
+        prototypes.append(FrozenPrototype(prototype_id=identifier, kind="list", path=relative))
+        bindings.list_paragraph = identifier
+    if not selection.formats.tables:
+        identifier = "neutral-table"
+        relative = f"prototypes/{identifier}.xml"
+        row_path = f"prototypes/{identifier}-row.xml"
+        section = xpath(sanitized.package.part("word/document.xml").read_tree, "./w:body/w:sectPr")[
+            0
+        ]
+        page_size, margins = find_first(section, "w:pgSz"), find_first(section, "w:pgMar")
+        try:
+            width = int(page_size.get(qn("w:w"), "11906")) if page_size is not None else 11906
+            left = int(margins.get(qn("w:left"), "1440")) if margins is not None else 1440
+            right = int(margins.get(qn("w:right"), "1440")) if margins is not None else 1440
+            width -= left + right
+            if width <= 0:
+                raise ValueError("不可用版心")
+        except ValueError as exc:
+            raise EngineError(ErrorCode.SCHEMA_INVALID, "所选页面尺寸不能承载中性表格") from exc
+        table = new_tree("w:tbl")
+        properties = sub(table, "w:tblPr")
+        sub(properties, "w:tblW", {"w:w": str(width), "w:type": "dxa"})
+        sub(properties, "w:tblLayout", {"w:type": "fixed"})
+        sub(sub(table, "w:tblGrid"), "w:gridCol", {"w:w": str(width)})
+        row = sub(table, "w:tr")
+        cell = sub(row, "w:tc")
+        sub(sub(cell, "w:tcPr"), "w:tcW", {"w:w": str(width), "w:type": "dxa"})
+        paragraph = sub(cell, "w:p")
+        sub(sub(paragraph, "w:r"), "w:t")
+        neutral_paragraph(paragraph)
+        (directory.parent / relative).write_bytes(serialize(table))
+        (directory.parent / row_path).write_bytes(serialize(row))
+        prototypes.append(
+            FrozenPrototype(
+                prototype_id=identifier,
+                kind="table",
+                path=relative,
+                row_path=row_path,
+                column_policy="flexible",
+            )
+        )
+        bindings.tables = [identifier]
     # 图片的容器采用冻结正文格式，图片本身只由新 IR 或确认素材决定。
     if bindings.body is not None:
         body = next(p for p in prototypes if p.prototype_id == bindings.body)

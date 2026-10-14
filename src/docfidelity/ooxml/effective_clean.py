@@ -35,12 +35,82 @@ themeFillShade space sz shadow frame offsetFrom display orient code before after
 beforeLines afterLines line lineRule beforeAutospacing afterAutospacing firstLine
 firstLineChars hanging hangingChars left right leftChars rightChars start end
 w h top bottom header footer gutter type num sep equalWidth color count
-styleId default customStyle abstractNumId numId ilvl typeface
+styleId default customStyle abstractNumId numId ilvl typeface pos leader
 firstRow lastRow firstColumn lastColumn noHBand noVBand
 """.split()
 )
 _SAFE_FIELDS = frozenset({"PAGE", "NUMPAGES", "SECTIONPAGES"})
 _VML = "urn:schemas-microsoft-com:vml"
+
+
+def unsupported_content(element: Element) -> bool:
+    """格式子树与明确清理的历史元数据以外，未知内容必须拒绝选中。"""
+    tag = localname(element)
+    if any(localname(parent) in _FORMAT for parent in element.iterancestors()):
+        return False
+    if namespace_of(element) == _VML:
+        return tag not in {
+            "shape",
+            "rect",
+            "roundrect",
+            "textbox",
+            "group",
+            "shapetype",
+            "path",
+            "stroke",
+            "fill",
+        }
+    if any(localname(parent) == "drawing" for parent in element.iterancestors()):
+        return False
+    return tag not in _FORMAT | {
+        "body",
+        "hdr",
+        "ftr",
+        "document",
+        "p",
+        "r",
+        "tbl",
+        "tr",
+        "tc",
+        "txbxContent",
+        "pict",
+        "drawing",
+        "sdt",
+        "sdtPr",
+        "sdtEndPr",
+        "sdtContent",
+        "hyperlink",
+        "ins",
+        "del",
+        "smartTag",
+        "AlternateContent",
+        "Choice",
+        "Fallback",
+        "t",
+        "delText",
+        "br",
+        "tab",
+        "cr",
+        "fldChar",
+        "instrText",
+        "fldSimple",
+        "bookmarkStart",
+        "bookmarkEnd",
+        "commentRangeStart",
+        "commentRangeEnd",
+        "commentReference",
+        "proofErr",
+        "lastRenderedPageBreak",
+        "tag",
+        "alias",
+        "id",
+        "lock",
+        "placeholder",
+        "showingPlcHdr",
+        "docPart",
+        "text",
+        "dataBinding",
+    }
 
 
 def clean_format(element: Element) -> Element | None:

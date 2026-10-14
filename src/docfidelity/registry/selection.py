@@ -17,13 +17,17 @@ def default_selection(draft: ImportDraft) -> TemplateSelection:
         for r in c.ranges
         if (by_id[r.start_node_id].part, by_id[r.start_node_id].block_index) not in unsupported
     ]
-    occupied = {r.start_node_id for r in optional}
+    occupied = {
+        (by_id[r.start_node_id].part, i)
+        for r in optional
+        for i in range(by_id[r.start_node_id].block_index, by_id[r.end_node_id].block_index + 1)
+    }
     body = [
         r
         for c in draft.candidates
         if c.kind == "body"
         for r in c.ranges
-        if r.start_node_id not in occupied
+        if (by_id[r.start_node_id].part, by_id[r.start_node_id].block_index) not in occupied
         and (by_id[r.start_node_id].part, by_id[r.start_node_id].block_index) not in unsupported
     ]
     return TemplateSelection(
