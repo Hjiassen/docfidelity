@@ -145,7 +145,7 @@ class ContentIR(FormatModel):
 
     project_id: str
     doc_key: str = Field(description="项目内的文档条目键，如 'detail' / 'testplan'")
-    profile_id: str = Field(description="生成所用的文档类型档案")
+    profile_id: str | None = Field(default=None, description="V1 档案引用；V2 无需提供")
     template_ref: str = Field(description="生成所用的模板包引用 template_id@version")
     units: list[ContentUnit] = Field(default_factory=list)
     source_digests: dict[str, str] = Field(

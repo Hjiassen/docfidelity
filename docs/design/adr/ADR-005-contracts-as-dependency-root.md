@@ -18,10 +18,12 @@
 ## 决策
 
 1. `contracts` **只依赖 `pydantic`**，被内核所有模块依赖，是依赖之根；
-2. **OOXML 读写只有一个出口**（`ooxml` 模块），且只允许 `ooxml` / `render` / `qa` 使用；
+2. **OOXML 读写只有一个出口**（`ooxml` 模块），且只允许 `registry`（入库）/ `render` / `qa` 使用；
 3. `compose` 与 `server/api` **明确禁止** import `ooxml`；
 4. 契约冻结的边界定义为「**字段与语义**」：允许增加可选字段，修改已有字段的
    名称或语义属破坏性变更，须走 RFC。
+
+2026-10-14：决策载荷、输出和适配器协议下沉到 `contracts`，规则路由、基线与留痕位于 `pipeline.decisioning`。`agents` 位于 pipeline 之上；服务端组合根通过发行入口点发现实现并注入协议实例。规则会话不加载 agents，pipeline 静态导入 agents 在 CI 被禁止。
 
 ## 备选方案与取舍
 

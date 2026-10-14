@@ -15,9 +15,17 @@
           "type": "string"
         },
         "profile_id": {
-          "description": "生成所用的文档类型档案",
-          "title": "Profile Id",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "V1 档案引用；V2 无需提供",
+          "title": "Profile Id"
         },
         "project_id": {
           "title": "Project Id",
@@ -55,7 +63,6 @@
       "required": [
         "project_id",
         "doc_key",
-        "profile_id",
         "template_ref"
       ],
       "title": "ContentIR",

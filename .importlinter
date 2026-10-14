@@ -23,8 +23,8 @@ name = 内核分层（决策五：contracts 为依赖之根；分层依 DD-2.2 �
 type = layers
 layers =
     docfidelity.builder
-    docfidelity.pipeline
     docfidelity.agents
+    docfidelity.pipeline
     docfidelity.qa
     docfidelity.compose | docfidelity.render | docfidelity.registry
     docfidelity.ingest
@@ -137,17 +137,10 @@ forbidden_modules =
     server
 
 [importlinter:contract:pipeline-agents-seam]
-name = 与决策层的耦合只在接缝模块（其余编排模块不认识 agents）
+name = 编排只依赖决策协议，禁止反向导入模型适配层
 type = forbidden
 source_modules =
-    docfidelity.pipeline.artifacts
-    docfidelity.pipeline.checkpoint
-    docfidelity.pipeline.events
-    docfidelity.pipeline.job
-    docfidelity.pipeline.profiles
-    docfidelity.pipeline.sources
-    docfidelity.pipeline.stages
-    docfidelity.pipeline.templates
+    docfidelity.pipeline
 forbidden_modules =
     docfidelity.agents
 allow_indirect_imports = True

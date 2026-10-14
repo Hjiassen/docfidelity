@@ -39,6 +39,8 @@ office = [
     "pywin32>=306; sys_platform == 'win32'",
     "PyMuPDF>=1.24,<2",
 ]
+# extras: preview —— PDFium 文本读取与缩略图；排版提供者另行配置
+preview = ["pypdfium2>=4.30,<6"]
 # extras: server —— HTTP / 作业持久化 / SSE
 server = [
     "fastapi>=0.115,<0.116",
@@ -81,6 +83,9 @@ docfidelity = "docfidelity.builder.cli:main"
 # （``server.api.deps.load_stage_registry``），故装上本发行版即可发起构建，
 # ``server`` 一行都不用改。换一套阶段体 = 装另一个提供者、把本项删掉。
 reference = "docfidelity.builder.stages:provide"
+
+[project.entry-points."docfidelity.model_adapters"]
+openai = "docfidelity.agents.sdk_adapter:OpenAIAgentsAdapter"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/docfidelity"]

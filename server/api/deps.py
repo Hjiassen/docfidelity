@@ -37,6 +37,7 @@ from docfidelity.pipeline import (
     StageRegistry,
     Workspace,
     build_session,
+    create_model_adapter,
     model_session_factory,
 )
 
@@ -109,6 +110,11 @@ def session_factory_from(settings: ServerSettings) -> SessionFactory | None:
         base_url=settings.model_base_url,
         api_key=None if secret is None else secret.get_secret_value(),
         baseline_path=settings.storage_root / BASELINE_FILENAME,
+        adapter=create_model_adapter(
+            model=settings.model_name,
+            base_url=settings.model_base_url,
+            api_key=None if secret is None else secret.get_secret_value(),
+        ),
     )
 
 

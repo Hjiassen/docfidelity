@@ -15,7 +15,7 @@ DD-13.1 对 ``server`` 的硬约束是"不得 import ``ooxml`` / ``registry`` �
 （P05 第 2~5 步）正是这样一步能力：服务端必须能触发解析、拿到入库报告、把包写进库，
 但它一行都不该认识 ``registry``。
 
-本模块因此与 :mod:`.decisions` 对称：``decisions`` 是 ``pipeline`` 里唯一认识 ``agents``
+本模块因此与 :mod:`.decisions` 对称：``decisions`` 是作业级决策协议
 的模块，本模块是唯一认识 ``registry`` 的模块——两条都由 ``.importlinter`` 的 forbidden
 契约锁住（``pipeline-agents-seam`` / ``pipeline-registry-seam``）。
 

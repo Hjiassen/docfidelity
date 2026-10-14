@@ -31,9 +31,13 @@
 ## 2. 模块边界（允许依赖 → 禁止依赖）
 
 ```
+builder（组合根）
+  ↑
+agents（适配器，仅消费契约和工具面）
+  ↑
 pipeline
   ↑
-agents | compose | registry | ingest | render | qa
+compose | registry | ingest | render | qa
   ↑
 ooxml | model
   ↑
@@ -51,7 +55,7 @@ contracts            platform（与 contracts 平级，不被内核业务模块�
 | `compose` | `contracts` `model` `ingest` | **`ooxml`** `registry` `render` |
 | `render` | `contracts` `ooxml` `platform` | `compose` `server` |
 | `qa` | `contracts` `ooxml`（只读） | `server` `web` |
-| `pipeline` | 上述内核模块 + `platform` | **`server` `web`** |
+| `pipeline` | 上述内核模块 + `platform`，通过契约接收模型适配器 | **`agents` `server` `web`** |
 | `agents` | `contracts` `pipeline` 工具面 | `web` **`ooxml`** |
 | `server` | `contracts` `pipeline` | **`ooxml`** `registry` 内部实现 |
 | `web` | 仅 HTTP | 一切内核模块 |
@@ -60,10 +64,12 @@ contracts            platform（与 contracts 平级，不被内核业务模块�
 
 1. **编排与渲染解耦** —— 内容以 `ContentIR` 表达；`compose` 只产出 IR，`render` 只消费 IR。
 2. **模板解析前置** —— 解析全部落在 `registry.ingest`；生成期只走 `ContractQuery`。
-3. **Agent 只做决策** —— 工具层不注册任何 OOXML 直写工具。
+3. **模型只产出结构化决策或内容草稿** —— 不输出布局或 OOXML；工具层不注册任何 OOXML 直写工具。正文撰写使用独立内容生成协议，不能塞进旧候选选择协议。
 4. **核心零 Web 依赖** —— 内核可在无 HTTP、无 DB 环境下全绿。
 5. **契约模块为依赖之根** —— `contracts` 只依赖 `pydantic`，被所有人依赖。
 6. **引擎与文档类型无关** —— 文档类型与领域概念均为外部数据，接入新类型只写配置。
+
+V2 以用户选择生成的有效模板为格式源，以新材料为业务源。原件只在导入时读取；渲染消费有效材料、FormatBindings 与冻结空原型。未识别项默认不选，页眉/封面普通旧文字也须清理，固定素材必须显式确认。V1 领域档案入口临时保留至 M5，不是 V2 的必经步骤。
 
 ## 4. 编码规范
 

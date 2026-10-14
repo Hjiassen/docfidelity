@@ -1,28 +1,4 @@
-"""决策接缝（DD-12.3 / DD-12.4 落到编排层）—— ``agents`` 与 ``pipeline`` 之间唯一的耦合点。
-
-为什么接缝在编排层
-------------------
-调用方向是"编排调 Agent"（``agents`` 不 import ``pipeline``，见 ``.importlinter`` 的
-``kernel-layers``）。所以"谁来提问、用哪个适配层、留痕落到哪"必须在编排侧回答。
-把这三件事散进五个阶段体，会得到三个具体后果：① 每个阶段各自 new 一个适配层，
-模型连接数与阶段数成正比；② 留痕各写各的，报告与裁决队列的口径从此不一致；
-③ "关掉模型"这件事要在五个地方各改一次，漏一处就是一次真实的模型调用。
-
-本模块只做胶合，不做判定
-------------------------
-"谁该被问、问不出来怎么办"全部在 :mod:`docfidelity.agents.routing`（唯一实现）。
-这里只负责把编排层已有的东西（作业 id、事件日志、项目配置）接到那条链路上，
-再把结果收成一个便于查询的对象。故本模块里**没有**任何 ``if confidence < ...``
-之类的分支——那类判定出现第二份实现时，症状是"报告说进了裁决队列、作业状态却显示成功"。
-
-留痕为什么落在事件日志上
-------------------------
-``contracts.job.EventType`` 里的 ``decision`` 一直是个保留值（DD-11.6 列了它，
-但直到本模块出现才有人写）。把决策落成事件而不是另开一张表，换来三件已经存在的事：
-SSE 流里直接看得见（P09 的事件流据此显示"这一步是模型决定的"）、断线重连能按
-``Last-Event-ID`` 补齐、进程重启后靠 :func:`~docfidelity.pipeline.read_events` 重建。
-为决策另造一套留痕通道，就等于把这三条各实现第二遍。
-"""
+"""作业级决策会话：消费共享协议，组合根注入模型适配器。"""
 
 from __future__ import annotations
 
@@ -31,33 +7,38 @@ from math import isfinite
 from pathlib import Path
 from typing import Any, Final
 
-from docfidelity.agents import (
-    BASELINE_FILENAME,
-    DEFAULT_MAX_RETRIES,
-    BaselineStatus,
-    DecisionContext,
+from docfidelity.contracts.config import RoutingConfig
+from docfidelity.contracts.decision_catalog import MODEL_ROUTED, decision_point
+from docfidelity.contracts.decisions import (
     DecisionOutcome,
     DecisionRecorder,
     GrammarCapability,
-    MemoryRecorder,
     ModelAdapter,
-    NullAdapter,
-    OpenAIAgentsAdapter,
-    RoutingTable,
-    build_routing,
-    decision_point,
-    dispatch,
 )
-from docfidelity.agents import load_status as _load_baseline_status
-from docfidelity.agents import probe_grammar as _probe_grammar
-from docfidelity.agents.baseline import baseline_digests, default_cases, endpoint_digest
-from docfidelity.agents.catalog import MODEL_ROUTED
-from docfidelity.contracts.config import RoutingConfig
 from docfidelity.contracts.errors import EngineError
 from docfidelity.contracts.job import Decision, EventType, Job, JobEvent, ModelCall
 
 from .checkpoint import path_segment
+from .decisioning.baseline import (
+    BASELINE_FILENAME,
+    BaselineStatus,
+    baseline_digests,
+    default_cases,
+    endpoint_digest,
+)
+from .decisioning.baseline import load_status as _load_baseline_status
+from .decisioning.defaults import NullAdapter
+from .decisioning.defaults import probe_grammar as _probe_grammar
+from .decisioning.recorder import MemoryRecorder
+from .decisioning.routing import (
+    DEFAULT_MAX_RETRIES,
+    DecisionContext,
+    RoutingTable,
+    build_routing,
+    dispatch,
+)
 from .events import EventLog
+from .model_provider import create_model_adapter as OpenAIAgentsAdapter
 
 __all__ = [
     "BASELINE_FILENAME",
@@ -106,7 +87,7 @@ class JournalRecorder:
     """把决策与模型调用落成**作业事件**的留痕（实现 ``DecisionRecorder``）。
 
     查询面（``decisions`` / ``pending_decisions`` / ``silent_adoptions`` …）**委托**给
-    内部那份 :class:`~docfidelity.agents.MemoryRecorder`：这些口径各有唯一实现，
+    内部那份 :class:`~docfidelity.pipeline.decisioning.recorder.MemoryRecorder`：这些口径各有唯一实现，
     本类只补"再写一条事件"。两处各写一份的后果是"裁决队列按事件算、报告按内存算"，
     同一份构建给出两个数字，而两个都像是真的。
 
@@ -221,7 +202,7 @@ class DecisionSession:
     落位决策"与"另一个阶段的第一次"会得到同一个标识，留痕上分不出谁是谁。
 
     本类刻意不做成 ``dataclass``：它持有一个**可变**的
-    :class:`~docfidelity.agents.DecisionContext`（序号在其中自增），
+    :class:`~docfidelity.pipeline.decisioning.routing.DecisionContext`（序号在其中自增），
     而 dataclass 的 ``eq`` / ``repr`` 会把那个内部状态当成会话的身份。
     """
 
@@ -353,15 +334,12 @@ def model_session_factory(
     baseline: Mapping[str, float] | None = None,
     baseline_path: str | Path | None = None,
     max_retries: int = DEFAULT_MAX_RETRIES,
+    adapter: ModelAdapter | None = None,
 ) -> Callable[[Job, RoutingConfig | None, EventLog], DecisionSession]:
     """把"接一个真模型（OpenAI 兼容端点）"收成一个可注入的作业级会话工厂。
 
-    为什么在这里而不是在服务端的组合根
-    ----------------------------------
-    ``server`` 不得 import ``agents``（``.importlinter`` 的 ``server-has-no-ooxml``），
-    而适配层是 ``agents`` 的东西。本模块既然是"与决策层的耦合只有这里"的那条接缝
-    （DD-12.3），**"怎么把一个端点折成适配层"就也在这里回答一次**；服务端的组合根
-    只做一件事：把 ``settings.model_*`` 读出来传进来（`server.api.deps.build_state`）。
+    组合根可直接注入 ModelAdapter 实例。旧调用方省略实例时，通过发行入口点
+    发现 provider；本模块不导入具体 agents 实现。
 
     为什么一个适配层给所有作业共用
     ------------------------------
@@ -384,7 +362,11 @@ def model_session_factory(
     生产准入要求报告匹配当前模型、内置样本集与路由姿态。报告缺失、失效或未覆盖的点
     回退规则并标待确认，不让构建失败。显式基线映射由嵌入方负责验证身份，未覆盖点同样回退。
     """
-    adapter = OpenAIAgentsAdapter(model=model, base_url=base_url, api_key=api_key)
+    adapter = (
+        adapter
+        if adapter is not None
+        else OpenAIAgentsAdapter(model=model, base_url=base_url, api_key=api_key)
+    )
 
     def factory(job: Job, routing: RoutingConfig | None, events: EventLog) -> DecisionSession:
         if routing is not None and not routing.model_enabled:

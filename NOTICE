@@ -28,8 +28,14 @@ for its terms. Notably:
   - FastAPI / SQLAlchemy / sse-starlette (MIT, `extras: server`)
   - PyMuPDF             (AGPL-3.0 or commercial, `extras: office`)
   - pywin32             (PSF-style, `extras: office`, Windows only)
+  - pypdfium2           (BSD-3-Clause / Apache-2.0, `extras: preview`)
+  - PDFium              (BSD-style plus bundled dependency licenses)
 
 Note on PyMuPDF: it is an **optional** extra used only for render spot-check
 (docx -> PDF -> PNG). Deployments that cannot accept AGPL-3.0 must either
 obtain a commercial license from Artifex or leave `extras: office` uninstalled
 and provide a compatible external rendering workflow instead.
+
+The preview extra uses PDFium for PDF text and bitmap processing. Retain the
+upstream pypdfium2/PDFium license and dependency notices when redistributing
+their wheels or binaries. It does not provide a DOCX layout engine.
