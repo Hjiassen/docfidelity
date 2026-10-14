@@ -45,12 +45,29 @@ def toc_ranges(root: Element) -> list[tuple[int, int]]:
 
 def safe_toc_instruction(blocks: list[Element]) -> str:
     """仅允许数字层级和无参数的版式开关，不接受书签或旧文字。"""
-    instructions = [
-        field.get(qn("w:instr"), "") for block in blocks for field in xpath(block, ".//w:fldSimple")
-    ]
-    instructions.extend(
-        "".join(node.text or "" for node in xpath(block, ".//w:instrText")) for block in blocks
-    )
+    instructions: list[str] = []
+    depth = 0
+    collecting = False
+    parts: list[str] = []
+    for block in blocks:
+        for node in block.iter():
+            if node.tag == qn("w:fldChar"):
+                marker = node.get(qn("w:fldCharType"))
+                if marker == "begin":
+                    if depth == 0:
+                        parts, collecting = [], True
+                    depth += 1
+                elif marker == "separate" and depth == 1:
+                    collecting = False
+                elif marker == "end":
+                    depth -= 1
+                    if depth == 0:
+                        instructions.append("".join(parts))
+                        collecting = False
+            elif node.tag == qn("w:instrText") and depth == 1 and collecting:
+                parts.append(node.text or "")
+            elif node.tag == qn("w:fldSimple") and depth == 0:
+                instructions.append(node.get(qn("w:instr"), ""))
     raw = next(
         (
             instruction.strip()

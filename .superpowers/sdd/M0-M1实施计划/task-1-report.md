@@ -164,3 +164,27 @@ UTF-8 configuration). Forbidden words, line limit and kernel-no-Web gates passed
 Full unit/API/schema integration checks are reserved for the controller as instructed.
 
 No render, server or generated schema file was changed in this round.
+
+## Fix Round 2 (N1/N2)
+
+`effective_fields.safe_toc_instruction` now tracks field depth and the outer field's
+instruction phase. Nested `PAGEREF` instructions in normal cached TOC entries are
+discarded as cache; only the outer safe TOC instruction is validated and frozen. The
+cleaned wrapper contains no `w:instrText`, `w:fldChar`, old cache text or old bookmark.
+
+`default_selection` now checks every block in each candidate range against unsupported
+nodes. A candidate containing an unsupported middle block is skipped as a whole and its
+blocks remain occupied, so the body candidate cannot select them again. Explicitly
+selecting that range still raises `E_SCHEMA_INVALID` through normal validation.
+
+RED evidence: `test_effective_toc_review.py` initially failed both cases (nested
+`PAGEREF` returned `E_SCHEMA_INVALID`; unsupported-middle TOC was selected by default).
+GREEN evidence:
+
+```text
+python -m pytest tests/unit/test_effective_toc_review.py tests/unit/test_effective_review.py tests/unit/test_effective_templates.py
+46 passed
+```
+
+The focused round-2 ruff and strict mypy checks passed for the changed OOXML/registry
+files. No renderer, server, contract, generated schema, or unrelated legacy file changed.

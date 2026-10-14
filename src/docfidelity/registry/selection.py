@@ -10,16 +10,21 @@ def default_selection(draft: ImportDraft) -> TemplateSelection:
     """未识别不启用；支持的正文块和已检测布局默认选中。"""
     by_id = {n.node_id: n for n in draft.nodes}
     unsupported = {(n.part, n.block_index) for n in draft.nodes if not n.supported}
+    candidates = [
+        r for c in draft.candidates if c.status == "detected" and c.kind != "body" for r in c.ranges
+    ]
     optional = [
         r
-        for c in draft.candidates
-        if c.status == "detected" and c.kind != "body"
-        for r in c.ranges
-        if (by_id[r.start_node_id].part, by_id[r.start_node_id].block_index) not in unsupported
+        for r in candidates
+        if not any(
+            (by_id[r.start_node_id].part, i) in unsupported
+            for i in range(by_id[r.start_node_id].block_index, by_id[r.end_node_id].block_index + 1)
+        )
     ]
+    # 被跳过的完整候选仍占据范围，避免正文默认选择重新收回其中的块。
     occupied = {
         (by_id[r.start_node_id].part, i)
-        for r in optional
+        for r in candidates
         for i in range(by_id[r.start_node_id].block_index, by_id[r.end_node_id].block_index + 1)
     }
     body = [
