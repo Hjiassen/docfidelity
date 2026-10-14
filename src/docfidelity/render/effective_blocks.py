@@ -21,9 +21,10 @@ from docfidelity.ooxml.doc import (
     xpath,
 )
 from docfidelity.ooxml.geometry import normalize_table_width, pixels_to_emu, twips_to_emu
-from docfidelity.ooxml.package import NUMBERING_PART, DocxPackage
+from docfidelity.ooxml.package import DocxPackage
 from docfidelity.ooxml.pictures import place_picture
 
+from .effective_numbering import create_list_numbering
 from .order import P_PR_ORDER, TBL_PR_ORDER, TC_PR_ORDER, TR_PR_ORDER
 from .variables import fill_paragraph
 
@@ -140,36 +141,15 @@ def _list(blocks: FrozenBlocks, unit: ContentUnit) -> list[Element]:
 def _list_numbering(blocks: FrozenBlocks, family: str, paragraph: Element) -> str:
     if family in blocks.list_ids:
         return blocks.list_ids[family]
-    part = blocks.package.find_part(NUMBERING_PART)
-    if part is None:
-        raise EngineError(ErrorCode.SCHEMA_INVALID, "列表缺少冻结编号部件")
-    root = part.tree
-    abstract_id = str(
-        max([int(e.get(qn("w:abstractNumId"), "0")) for e in xpath(root, "./w:abstractNum")] or [0])
-        + 1
+    num_id = create_list_numbering(
+        blocks.package,
+        paragraph,
+        family,
+        neutral=(
+            not blocks.version.selection.formats.numbering
+            or not blocks.version.selection.formats.body
+        ),
     )
-    num_id = str(max([int(e.get(qn("w:numId"), "0")) for e in xpath(root, "./w:num")] or [0]) + 1)
-    abstract = new_tree("w:abstractNum", {"w:abstractNumId": abstract_id})
-    instances = xpath(root, "./w:num")
-    if instances:
-        instances[0].addprevious(abstract)
-    else:
-        root.append(abstract)
-    sub(abstract, "w:multiLevelType", {"w:val": "singleLevel"})
-    level = sub(abstract, "w:lvl", {"w:ilvl": "0"})
-    sub(level, "w:start", {"w:val": "1"})
-    fmt, text = _LIST_FORMATS[family]
-    sub(level, "w:numFmt", {"w:val": fmt})
-    sub(level, "w:lvlText", {"w:val": text})
-    sub(level, "w:lvlJc", {"w:val": "left"})
-    properties = find_first(paragraph, "w:pPr")
-    if properties is not None:
-        # 只从已冻结列表段落复制直接缩进，不采集编号原型。
-        indent = find_first(properties, "w:ind")
-        if indent is not None:
-            sub(level, "w:pPr").append(deep_copy(indent))
-    instance = sub(root, "w:num", {"w:numId": num_id})
-    sub(instance, "w:abstractNumId", {"w:val": abstract_id})
     blocks.list_ids[family] = num_id
     return num_id
 
@@ -179,6 +159,8 @@ def _table(blocks: FrozenBlocks, unit: ContentUnit) -> list[Element]:
     data = TableData.model_validate(
         {key: fields[key] for key in TableData.model_fields if key in fields}
     )
+    if data.caption_slot is not None:
+        raise EngineError(ErrorCode.SCHEMA_INVALID, "冻结模板未声明题注编号协议")
     if not data.columns or any(len(row) != len(data.columns) for row in data.rows):
         raise EngineError(ErrorCode.SCHEMA_INVALID, "表格列数与数据行不一致")
     bindings = blocks.version.format_bindings.tables
@@ -188,21 +170,30 @@ def _table(blocks: FrozenBlocks, unit: ContentUnit) -> list[Element]:
     identifier: str | None = requested if isinstance(requested, str) else None
     if identifier is None:
         for key in bindings:
-            if key in blocks.prototypes and blocks.prototypes[key].columns == len(data.columns):
+            if key in blocks.prototypes and (
+                blocks.prototypes[key].columns == len(data.columns)
+                or blocks.prototypes[key].column_policy == "flexible"
+            ):
                 identifier = key
                 break
     metadata, table = blocks.prototype(identifier, "table")
-    if metadata.columns != len(data.columns) or metadata.row_path is None:
+    flexible = metadata.column_policy == "flexible"
+    if flexible and (
+        blocks.version.selection.formats.tables or metadata.source_node_id is not None
+    ):
+        raise EngineError(ErrorCode.PACKAGE_INCOMPLETE, "弹性列策略必须来自明确选择的中性原型")
+    if (not flexible and metadata.columns != len(data.columns)) or metadata.row_path is None:
         raise EngineError(ErrorCode.SCHEMA_INVALID, "表格列数与冻结原型不匹配")
     if table.tag != qn("w:tbl"):
         raise EngineError(ErrorCode.PACKAGE_INCOMPLETE, "冻结表格原型结构非法")
     rows = xpath(table, "./w:tr")
     row_prototype = parse((blocks.directory / metadata.row_path).read_bytes())
     grid = xpath(table, "./w:tblGrid/w:gridCol")
-    if not rows or len(grid) != metadata.columns or row_prototype.tag != qn("w:tr"):
+    physical_columns = 1 if flexible else metadata.columns
+    if not rows or len(grid) != physical_columns or row_prototype.tag != qn("w:tr"):
         raise EngineError(ErrorCode.PACKAGE_INCOMPLETE, "冻结表格缺少同表行或列宽")
     for row in [*rows, row_prototype]:
-        if len(xpath(row, "./w:tc")) != metadata.columns or xpath(
+        if len(xpath(row, "./w:tc")) != physical_columns or xpath(
             row, ".//w:gridSpan | .//w:vMerge"
         ):
             raise EngineError(ErrorCode.SCHEMA_INVALID, "当前表格不支持合并单元格或不规则行")
@@ -216,15 +207,25 @@ def _table(blocks: FrozenBlocks, unit: ContentUnit) -> list[Element]:
     indent = find_first(properties, "w:tblInd")
     if indent is not None:
         available -= max(0, _integer(indent, "w:w"))
-    widths = (
-        original_widths
-        if sum(original_widths) <= available
-        else normalize_table_width(original_widths, available)
-    )
-    # 几何助手的可读性下限可能增宽极窄列；冻结渲染须遵守逐列只缩不放。
-    widths = [
-        min(original, fitted) for original, fitted in zip(original_widths, widths, strict=True)
-    ]
+    if flexible:
+        widths = normalize_table_width(
+            [1] * len(data.columns), min(sum(original_widths), available)
+        )
+        grid_container = find_first(table, "w:tblGrid")
+        assert grid_container is not None
+        for column in grid:
+            grid_container.remove(column)
+        grid = [sub(grid_container, "w:gridCol") for _ in widths]
+    else:
+        widths = (
+            original_widths
+            if sum(original_widths) <= available
+            else normalize_table_width(original_widths, available)
+        )
+        # 几何助手的可读性下限可能增宽极窄列；冻结渲染须遵守逐列只缩不放。
+        widths = [
+            min(original, fitted) for original, fitted in zip(original_widths, widths, strict=True)
+        ]
     for column, width in zip(grid, widths, strict=True):
         column.set(qn("w:w"), str(width))
     table_width = ensure_child_in_order(properties, "w:tblW", TBL_PR_ORDER)
@@ -233,6 +234,11 @@ def _table(blocks: FrozenBlocks, unit: ContentUnit) -> list[Element]:
         table.remove(row)
     for index, values in enumerate([data.columns, *data.rows]):
         row = deep_copy(rows[0] if index == 0 else row_prototype)
+        if flexible:
+            # 新列只能复制该中性表自己的单元格，整表宽度以上面的冻结基准为上限。
+            cell = xpath(row, "./w:tc")[0]
+            for _ in range(len(data.columns) - 1):
+                row.append(deep_copy(cell))
         row_properties = find_first(row, "w:trPr")
         if row_properties is None:
             row_properties = new_tree("w:trPr")
@@ -258,6 +264,8 @@ def _image(blocks: FrozenBlocks, unit: ContentUnit) -> list[Element]:
     data = FigureData.model_validate(
         {key: unit.fields[key] for key in FigureData.model_fields if key in unit.fields}
     )
+    if data.caption_slot is not None:
+        raise EngineError(ErrorCode.SCHEMA_INVALID, "冻结模板未声明题注编号协议")
     relative = PurePosixPath(data.image_ref)
     if (
         not data.image_ref
@@ -310,10 +318,6 @@ def _unsupported(blocks: FrozenBlocks, unit: ContentUnit) -> list[Element]:
     raise EngineError(ErrorCode.SCHEMA_INVALID, "有效模板契约未声明可复用块绑定")
 
 
-_LIST_FORMATS: Final[dict[str, tuple[str, str]]] = {
-    "bullets": ("bullet", "\u2022"),
-    "numbered": ("decimal", "%1."),
-}
 _HANDLERS: Final[dict[str, Callable[[FrozenBlocks, ContentUnit], list[Element]]]] = {
     "heading": _heading,
     "para": _body,

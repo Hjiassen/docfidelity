@@ -21,10 +21,16 @@ from tests.fixtures.effective_template import build_effective_source
 pytestmark = pytest.mark.unit
 
 
-def _bundle(tmp_path: Path, *, variable: bool = False) -> tuple[Path, TemplateVersion]:
+def _bundle(
+    tmp_path: Path, *, variable: bool = False, formats: dict[str, bool] | None = None
+) -> tuple[Path, TemplateVersion]:
     source = build_effective_source(tmp_path / "source.docx", cover=False)
     draft = inspect_template(source, import_id="draft")
     selection = default_selection(draft)
+    if formats is not None:
+        from docfidelity.contracts.imports import FormatSelection
+
+        selection.formats = FormatSelection(**formats)
     selection.ranges = [r for r in selection.ranges if r.kind != "header"]
     if variable:
         node = next(n for n in draft.nodes if n.text_preview == "OLD_BODY")
@@ -402,3 +408,202 @@ def test_shrinking_table_does_not_enlarge_a_narrow_column(tmp_path: Path) -> Non
     assert widths[0] <= 100
     assert widths[1] <= 20000
     assert sum(widths) <= 8640
+
+
+def _rendered_list_level(package: DocxPackage, text: str):
+    paragraph = xpath(package.part("word/document.xml").read_tree, f'.//w:p[w:r/w:t="{text}"]')[0]
+    num_id = xpath(paragraph, "./w:pPr/w:numPr/w:numId")[0].get(qn("w:val"))
+    numbering = package.part("word/numbering.xml").read_tree
+    abstract_id = xpath(numbering, f'./w:num[@w:numId="{num_id}"]/w:abstractNumId')[0].get(
+        qn("w:val")
+    )
+    return xpath(numbering, f'./w:abstractNum[@w:abstractNumId="{abstract_id}"]/w:lvl')[0]
+
+
+def test_bullet_list_consumes_frozen_numbering_level_format(tmp_path: Path) -> None:
+    directory, _ = _bundle(tmp_path)
+    package = DocxPackage.open(
+        render_effective(
+            directory,
+            _ir(ContentUnit(unit_id="b", type="bullets", text="Fresh bullet")),
+            {},
+            tmp_path / "new.docx",
+        )
+    )
+    level = _rendered_list_level(package, "Fresh bullet")
+    indent = xpath(level, "./w:pPr/w:ind")[0]
+    assert indent.get(qn("w:left")) == "360"
+    assert indent.get(qn("w:hanging")) == "360"
+    tab = xpath(level, "./w:pPr/w:tabs/w:tab")[0]
+    assert tab.get(qn("w:val")) == "num"
+    assert tab.get(qn("w:pos")) == "360"
+    fonts = xpath(level, "./w:rPr/w:rFonts")[0]
+    assert fonts.get(qn("w:ascii")) == "Symbol"
+    assert xpath(level, "./w:lvlText")[0].get(qn("w:val")) == "\uf0b7"
+
+
+@pytest.mark.parametrize("kind", ["table", "figure", "screenshot"])
+def test_caption_slot_is_rejected_without_frozen_numbering_protocol(
+    tmp_path: Path, kind: str
+) -> None:
+    directory, _ = _bundle(tmp_path)
+    fields = {"caption": "Caption", "caption_slot": 7}
+    if kind == "table":
+        fields.update({"columns": ["A", "B"], "rows": []})
+    else:
+        fields.update({"image_ref": "pixel.png", "width_px": 10, "height_px": 10})
+        assets = tmp_path / "assets"
+        assets.mkdir()
+        (assets / "pixel.png").write_bytes(b"test")
+    with pytest.raises(EngineError, match="E_SCHEMA_INVALID.*题注编号"):
+        render_effective(
+            directory,
+            _ir(ContentUnit(unit_id="c", type=kind, fields=fields)),
+            {},
+            tmp_path / "new.docx",
+        )
+    assert not (tmp_path / "new.docx").exists()
+
+
+def test_missing_declared_numbering_level_fails(tmp_path: Path) -> None:
+    from docfidelity.platform.hashing import sha256_file
+
+    directory, version = _bundle(tmp_path)
+    package = DocxPackage.open(directory / "effective.docx", read_only=False)
+    numbering = package.part("word/numbering.xml").tree
+    for child in list(numbering):
+        numbering.remove(child)
+    package.save(directory / "effective.docx")
+    version.file_hashes["effective.docx"] = sha256_file(directory / "effective.docx")
+    _save_contract(directory, version)
+    with pytest.raises(EngineError, match="E_PACKAGE_INCOMPLETE"):
+        render_effective(
+            directory,
+            _ir(ContentUnit(unit_id="b", type="bullets", text="Fresh")),
+            {},
+            tmp_path / "new.docx",
+        )
+
+
+@pytest.mark.parametrize("formats", [{"numbering": False}, {"body": False}])
+def test_neutral_list_selection_can_render_new_lists(
+    tmp_path: Path, formats: dict[str, bool]
+) -> None:
+    directory, version = _bundle(tmp_path, formats=formats)
+    if not version.selection.formats.numbering:
+        numbering = (
+            DocxPackage.open(directory / "effective.docx").part("word/numbering.xml").read_tree
+        )
+        assert not xpath(numbering, "./w:abstractNum | ./w:num")
+    (tmp_path / "source.docx").unlink()
+    content = _ir(
+        ContentUnit(unit_id="b", type="bullets", text="Neutral bullet"),
+        ContentUnit(unit_id="n", type="numbered", text="Neutral number"),
+    )
+    package = DocxPackage.open(render_effective(directory, content, {}, tmp_path / "new.docx"))
+    for text, fmt, label in [
+        ("Neutral bullet", "bullet", "\u2022"),
+        ("Neutral number", "decimal", "%1."),
+    ]:
+        level = _rendered_list_level(package, text)
+        assert xpath(level, "./w:numFmt")[0].get(qn("w:val")) == fmt
+        assert xpath(level, "./w:lvlText")[0].get(qn("w:val")) == label
+        assert not xpath(level, "./w:rPr/w:rFonts")
+
+
+def test_numbered_list_preserves_frozen_marker_punctuation(tmp_path: Path) -> None:
+    from docfidelity.platform.hashing import sha256_file
+
+    directory, version = _bundle(tmp_path)
+    package = DocxPackage.open(directory / "effective.docx", read_only=False)
+    numbering = package.part("word/numbering.xml").tree
+    for level in xpath(numbering, "./w:abstractNum/w:lvl"):
+        xpath(level, "./w:numFmt")[0].set(qn("w:val"), "lowerRoman")
+        xpath(level, "./w:lvlText")[0].set(qn("w:val"), "(%1)")
+    package.save(directory / "effective.docx")
+    version.file_hashes["effective.docx"] = sha256_file(directory / "effective.docx")
+    _save_contract(directory, version)
+    content = _ir(ContentUnit(unit_id="n", type="numbered", text="Roman item"))
+    generated = DocxPackage.open(render_effective(directory, content, {}, tmp_path / "new.docx"))
+    level = _rendered_list_level(generated, "Roman item")
+    assert xpath(level, "./w:numFmt")[0].get(qn("w:val")) == "lowerRoman"
+    assert xpath(level, "./w:lvlText")[0].get(qn("w:val")) == "(%1)"
+    assert xpath(level, "./w:pPr/w:ind")[0].get(qn("w:hanging")) == "360"
+
+
+def test_frozen_toc_control_is_retained_without_old_cache(tmp_path: Path) -> None:
+    source = build_effective_source(tmp_path / "source.docx", cover=False)
+    package = DocxPackage.open(source, read_only=False)
+    body = xpath(package.part("word/document.xml").tree, "./w:body")[0]
+    toc = new_tree("w:p")
+    instruction = 'TOC \\o "1-3" \\h'
+    field = sub(toc, "w:fldSimple", {"w:instr": instruction})
+    sub(sub(field, "w:r"), "w:t").text = "OLD_TOC_CACHE"
+    body.insert(1, toc)
+    package.save(source)
+    selection = default_selection(inspect_template(source, import_id="toc"))
+    directory = tmp_path / "bundle"
+    version = freeze_template(source, selection, directory, template_id="t", version=1, name="T")
+    assert len(version.format_bindings.toc) == 1
+    source.unlink()
+    tree = _tree(
+        render_effective(
+            directory,
+            _ir(ContentUnit(unit_id="p", type="para", text="Fresh")),
+            {},
+            tmp_path / "new.docx",
+        )
+    )
+    marker = version.format_bindings.toc[0].marker
+    controls = xpath(tree, f'.//w:sdt[w:sdtPr/w:tag[@w:val="{marker}"]]')
+    assert len(controls) == 1
+    assert xpath(controls[0], ".//w:fldSimple")[0].get(qn("w:instr")) == instruction
+    assert not any("OLD_TOC" in (text.text or "") for text in xpath(tree, ".//w:t"))
+
+
+def test_explicit_neutral_table_supports_new_column_count(tmp_path: Path) -> None:
+    directory, _ = _bundle(tmp_path, formats={"tables": False})
+    content = _ir(
+        ContentUnit(
+            unit_id="g",
+            type="table",
+            fields={
+                "columns": ["A", "B", "C"],
+                "rows": [["D", "E", "F"]],
+            },
+        )
+    )
+    tree = _tree(render_effective(directory, content, {}, tmp_path / "new.docx"))
+    table = xpath(tree, ".//w:tbl")[0]
+    assert len(xpath(table, "./w:tblGrid/w:gridCol")) == 3
+    assert [len(xpath(row, "./w:tc")) for row in xpath(table, "./w:tr")] == [3, 3]
+    assert [text.text for text in xpath(table, ".//w:t")] == ["A", "B", "C", "D", "E", "F"]
+    assert not xpath(table, ".//w:tblStyle")
+    assert all(run.get(qn("w:val")) == "0" for run in xpath(table, ".//w:rPr/w:i"))
+    assert (
+        sum(int(column.get(qn("w:w"))) for column in xpath(table, "./w:tblGrid/w:gridCol")) <= 8640
+    )
+
+
+def test_flexible_neutral_table_keeps_smaller_baseline_width(tmp_path: Path) -> None:
+    from docfidelity.ooxml.doc import parse, serialize
+    from docfidelity.platform.hashing import sha256_file
+
+    directory, version = _bundle(tmp_path, formats={"tables": False})
+    metadata = next(
+        p for p in version.prototypes if p.prototype_id == version.format_bindings.tables[0]
+    )
+    path = directory / metadata.path
+    table = parse(path.read_bytes())
+    columns = xpath(table, "./w:tblGrid/w:gridCol")
+    assert len(columns) == 1
+    columns[0].set(qn("w:w"), "1000")
+    path.write_bytes(serialize(table))
+    version.file_hashes[metadata.path] = sha256_file(path)
+    _save_contract(directory, version)
+    content = _ir(
+        ContentUnit(unit_id="g", type="table", fields={"columns": ["A", "B", "C"], "rows": []})
+    )
+    tree = _tree(render_effective(directory, content, {}, tmp_path / "new.docx"))
+    widths = [int(c.get(qn("w:w"))) for c in xpath(tree, ".//w:tblGrid/w:gridCol")]
+    assert widths == [334, 333, 333]
