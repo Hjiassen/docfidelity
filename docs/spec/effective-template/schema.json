@@ -3,6 +3,11 @@
     "CleanupReport": {
       "additionalProperties": false,
       "properties": {
+        "cleared_numbering_labels": {
+          "default": 0,
+          "title": "Cleared Numbering Labels",
+          "type": "integer"
+        },
         "cleared_text_containers": {
           "title": "Cleared Text Containers",
           "type": "integer"
@@ -115,14 +120,67 @@
           },
           "title": "Tables",
           "type": "array"
+        },
+        "toc": {
+          "items": {
+            "$ref": "#/$defs/FrozenToc"
+          },
+          "title": "Toc",
+          "type": "array"
         }
       },
       "title": "FormatBindings",
       "type": "object"
     },
+    "FormatSelection": {
+      "additionalProperties": false,
+      "properties": {
+        "body": {
+          "default": true,
+          "title": "Body",
+          "type": "boolean"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "heading": {
+          "default": true,
+          "title": "Heading",
+          "type": "boolean"
+        },
+        "numbering": {
+          "default": true,
+          "title": "Numbering",
+          "type": "boolean"
+        },
+        "page_setup": {
+          "default": true,
+          "title": "Page Setup",
+          "type": "boolean"
+        },
+        "tables": {
+          "default": true,
+          "title": "Tables",
+          "type": "boolean"
+        }
+      },
+      "title": "FormatSelection",
+      "type": "object"
+    },
     "FrozenPrototype": {
       "additionalProperties": false,
       "properties": {
+        "column_policy": {
+          "default": "fixed",
+          "enum": [
+            "fixed",
+            "flexible"
+          ],
+          "title": "Column Policy",
+          "type": "string"
+        },
         "columns": {
           "anyOf": [
             {
@@ -202,6 +260,35 @@
         "path"
       ],
       "title": "FrozenPrototype",
+      "type": "object"
+    },
+    "FrozenToc": {
+      "additionalProperties": false,
+      "properties": {
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "instruction": {
+          "title": "Instruction",
+          "type": "string"
+        },
+        "marker": {
+          "title": "Marker",
+          "type": "string"
+        },
+        "part": {
+          "title": "Part",
+          "type": "string"
+        }
+      },
+      "required": [
+        "part",
+        "marker",
+        "instruction"
+      ],
+      "title": "FrozenToc",
       "type": "object"
     },
     "FrozenVariable": {
@@ -477,6 +564,9 @@
           "title": "Format Version",
           "type": "string"
         },
+        "formats": {
+          "$ref": "#/$defs/FormatSelection"
+        },
         "import_id": {
           "title": "Import Id",
           "type": "string"
@@ -619,7 +709,9 @@
   "x-contract-models": [
     "CleanupReport",
     "FormatBindings",
+    "FormatSelection",
     "FrozenPrototype",
+    "FrozenToc",
     "FrozenVariable",
     "ImportDraft",
     "SelectionRange",
