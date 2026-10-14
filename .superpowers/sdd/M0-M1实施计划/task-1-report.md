@@ -65,11 +65,24 @@ was not repeated after that one-line gate fix.
 ## Limitations
 
 The allowlist intentionally supports the WordprocessingML structures exercised by the
-fixture. Complex drawing, chart, OLE, text-box and external linked media are classified
-as unsupported or excluded; users must explicitly choose supported internal images.
+fixture. Complex drawing, chart, OLE and external linked media are classified as
+unsupported or excluded; users must explicitly choose supported internal images.
+Legacy VML text-box containers are cleaned and bindable; modern drawing text-box
+geometry is not advertised as supported.
 Styles/numbering are retained as sanitized XML and the renderer must consume prototypes
 and bindings rather than reparse the original upload.
 
 ## Commit
 
-Pending controller integration commit: `feat(registry): freeze cleaned effective template`.
+Implementation commit: `283a6aa` (`feat(registry): freeze cleaned effective template`).
+
+Final renderer API: import `load_template_version` from
+`docfidelity.ooxml.effective_bundle`; `registry.freeze` re-exports it for callers.
+`FormatBindings` fields are `heading: dict[int, str]`, `body: str | None`,
+`list_paragraph: str | None`, `tables: list[str]`, `image: str | None`,
+`insertion_part` and `insertion_marker`. Prototype IDs map to `FrozenPrototype.path`;
+table `row_path` is a standalone empty `w:tr`; `columns` is its physical cell count.
+Variable markers wrap one paragraph in `w:sdt/w:sdtContent`. Fill runs within that
+paragraph and preserve their properties. The insertion marker wraps an empty paragraph;
+new blocks belong immediately before that control or inside its content wrapper, before
+the final section properties. `StructureKind` is a string enum for inspected node types.

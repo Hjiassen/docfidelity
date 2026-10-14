@@ -1,6 +1,6 @@
 """只读结构索引：节点标识以源摘要和位置为作用域。"""
 
-from docfidelity.contracts.imports import StructureNode
+from docfidelity.contracts.imports import StructureKind, StructureNode
 
 from .doc import Element, find_first, localname, paragraph_text, qn, xpath
 from .package import DOCUMENT_PART, DocxPackage
@@ -88,7 +88,7 @@ def index_structure(package: DocxPackage) -> list[StructureNode]:
                         part=part,
                         xpath=position,
                         block_index=block_index,
-                        kind=kind,  # type: ignore[arg-type]
+                        kind=StructureKind(kind),
                         text_preview=paragraph_text(element)[:160] if kind == "paragraph" else "",
                         heading_level=heading_level(element) if kind == "paragraph" else None,
                         supported=kind != "object"

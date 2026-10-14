@@ -11,6 +11,7 @@ from docfidelity.contracts.imports import (
     FrozenPrototype,
     ImportDraft,
     PrototypeKind,
+    StructureKind,
     TemplateSelection,
     TemplateVersion,
 )
@@ -25,8 +26,6 @@ from docfidelity.platform.hashing import canonical_json, sha256_file
 from .candidates import inspect_template
 from .sanitize import SanitizedTemplate, sanitize_template
 from .selection import validate_selection
-
-_TABLE_KIND = "ta" + "ble"
 
 
 def _write_prototypes(
@@ -63,9 +62,9 @@ def _write_prototypes(
             assert parent is not None
             parent.remove(section)
         prototype_type: PrototypeKind
-        if node.kind == _TABLE_KIND:
-            prototype_type = _TABLE_KIND
-        elif node.kind == "paragraph":
+        if node.kind == StructureKind.TABLE:
+            prototype_type = "table"
+        elif node.kind == StructureKind.PARAGRAPH:
             prototype_type = (
                 "heading"
                 if node.heading_level is not None
@@ -88,7 +87,7 @@ def _write_prototypes(
         (directory.parent / relative).write_bytes(serialize(empty))
         row_path: str | None = None
         columns: int | None = None
-        if prototype_type == _TABLE_KIND:
+        if prototype_type == "table":
             rows = xpath(empty, "./w:tr")
             if not rows:
                 raise EngineError(ErrorCode.SCHEMA_INVALID, "所选表格没有可冻结行")

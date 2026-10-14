@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import Literal
 
 from pydantic import Field
@@ -12,12 +13,20 @@ CandidateKind = Literal["cover", "toc", "body", "header", "footer"]
 PrototypeKind = Literal["heading", "body", "list", "table", "image"]
 
 
+class StructureKind(str, Enum):
+    PARAGRAPH = "paragraph"
+    TABLE = "table"
+    IMAGE = "image"
+    OBJECT = "object"
+    CONTAINER = "container"
+
+
 class StructureNode(FormatModel):
     node_id: str
     part: str
     xpath: str
     block_index: int
-    kind: Literal["paragraph", "table", "image", "object", "container"]
+    kind: StructureKind
     text_preview: str = ""
     heading_level: int | None = None
     supported: bool = True
