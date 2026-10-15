@@ -20,6 +20,7 @@ from docfidelity.ooxml.doc import (
     xpath,
 )
 from docfidelity.ooxml.effective_clean import clean_content, clean_format, mark_container
+from docfidelity.ooxml.effective_defaults import SourceDefaults
 from docfidelity.ooxml.effective_fields import freeze_toc, safe_toc_instruction
 from docfidelity.ooxml.effective_formats import (
     add_neutral_styles,
@@ -42,6 +43,7 @@ class SanitizedTemplate:
     variables: list[FrozenVariable]
     report: CleanupReport
     toc: list[FrozenToc]
+    defaults: SourceDefaults | None = None
 
 
 def sanitize_template(
@@ -122,6 +124,25 @@ def sanitize_template(
                 target=resolved.target_path.removeprefix("word/"),
             )
             section_rels[resolved.relationship.rel_id] = relationship.rel_id
+    empty_rels: dict[str, str] = {}
+
+    def empty_relationship(role: str) -> str:
+        if role not in empty_rels:
+            path = f"word/df-empty-{role}.xml"
+            while source.has_part(path) or target.has_part(path):
+                path = path.removesuffix(".xml") + "_.xml"
+            empty = new_tree("w:hdr" if role == "header" else "w:ftr")
+            sub(empty, "w:p")
+            target.add_xml_part(
+                path,
+                f"application/vnd.openxmlformats-officedocument.wordprocessingml.{role}+xml",
+                empty,
+            )
+            empty_rels[role] = target.attach_relationship(
+                DOCUMENT_PART, type=_REL_BASE + role, target=path.removeprefix("word/")
+            ).rel_id
+        return empty_rels[role]
+
     blocks: dict[str, Element] = {}
     toc: list[FrozenToc] = []
     toc_starts: dict[tuple[str, int], tuple[int, Element]] = {}
@@ -158,6 +179,7 @@ def sanitize_template(
                 {i for selected_part, i in selected if selected_part == part},
                 section_rels,
                 selection.formats,
+                empty_relationship,
             )
             if part == DOCUMENT_PART
             else ({}, new_tree("w:sectPr"))
@@ -208,6 +230,7 @@ def sanitize_template(
             sub(destination, "w:p")
         target.add_xml_part(part, source.content_type_of(part), rebuilt)
     cleared_numbering_labels = 0
+    source_defaults: SourceDefaults | None = None
     for role, path in (("styles", "word/styles.xml"), ("numbering", "word/numbering.xml")):
         if source.has_part(path):
             format_tree = clean_format(source.part(path).read_tree)
@@ -218,6 +241,7 @@ def sanitize_template(
                     and selection.formats.tables
                     and selection.formats.numbering
                 ):
+                    source_defaults = SourceDefaults(format_tree, selection.formats)
                     add_neutral_styles(format_tree)
                 if role == "numbering":
                     if not selection.formats.numbering:
@@ -248,6 +272,13 @@ def sanitize_template(
         target.attach_relationship(
             DOCUMENT_PART, type=_REL_BASE + "numbering", target="numbering.xml"
         )
+    if source_defaults is not None:
+        numbering = target.part("word/numbering.xml").read_tree
+        for block in blocks.values():
+            source_defaults.apply(block, numbering)
+        for part in roots:
+            if target.has_part(part):
+                source_defaults.apply(target.part(part).tree, numbering)
     for resolved in source.resolve_rels(DOCUMENT_PART, role="theme"):
         if resolved.part is not None and not resolved.relationship.is_external:
             theme = clean_theme(resolved.part.read_tree)
@@ -294,4 +325,4 @@ def sanitize_template(
         fixed_assets=selection.fixed_assets,
         cleared_numbering_labels=cleared_numbering_labels,
     )
-    return SanitizedTemplate(target, blocks, variables, report, toc)
+    return SanitizedTemplate(target, blocks, variables, report, toc, source_defaults)

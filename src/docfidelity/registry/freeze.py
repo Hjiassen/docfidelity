@@ -20,7 +20,7 @@ from docfidelity.ooxml.effective_bundle import effective_content_hash
 from docfidelity.ooxml.effective_bundle import load_template_version as load_template_version
 from docfidelity.ooxml.effective_clean import clean_content
 from docfidelity.ooxml.effective_formats import apply_content_formats, neutral_paragraph
-from docfidelity.ooxml.effective_index import locate_node
+from docfidelity.ooxml.effective_index import locate_node, paragraph_numbering
 from docfidelity.ooxml.package import DocxPackage
 from docfidelity.platform.hashing import canonical_json, sha256_file
 
@@ -38,6 +38,9 @@ def _write_prototypes(
 ) -> tuple[list[FrozenPrototype], FormatBindings]:
     prototypes: list[FrozenPrototype] = []
     bindings = FormatBindings(toc=sanitized.toc)
+    styles = (
+        source.part("word/styles.xml").read_tree if source.has_part("word/styles.xml") else None
+    )
     directory.mkdir()
     by_id = {n.node_id: n for n in draft.nodes}
     body_positions: set[tuple[str, int]] = set()
@@ -58,7 +61,41 @@ def _write_prototypes(
         empty = clean_content(original, markers={}, images={})
         if empty is None:
             continue
+        numbering = (
+            paragraph_numbering(original, styles) if node.kind == StructureKind.PARAGRAPH else None
+        )
+        if numbering is not None:
+            properties = find_first(empty, "w:pPr")
+            if properties is None:
+                properties = new_tree("w:pPr")
+                empty.insert(0, properties)
+            for previous in xpath(properties, "./w:numPr"):
+                properties.remove(previous)
+            # 有效指针在导入期固化，生成无需推断隐式默认段落样式。
+            pointer = new_tree("w:numPr")
+            preceding = {
+                qn("w:" + tag)
+                for tag in (
+                    "pStyle",
+                    "keepNext",
+                    "keepLines",
+                    "pageBreakBefore",
+                    "framePr",
+                    "widowControl",
+                )
+            }
+            properties.insert(
+                next(
+                    (i for i, child in enumerate(properties) if child.tag not in preceding),
+                    len(properties),
+                ),
+                pointer,
+            )
+            sub(pointer, "w:ilvl", {"w:val": numbering[1]})
+            sub(pointer, "w:numId", {"w:val": numbering[0]})
         apply_content_formats(empty, selection.formats, heading_level=node.heading_level)
+        if sanitized.defaults is not None:
+            sanitized.defaults.apply(empty, sanitized.package.part("word/numbering.xml").read_tree)
         for section in xpath(empty, ".//w:sectPr"):
             parent = section.getparent()
             assert parent is not None
@@ -71,9 +108,7 @@ def _write_prototypes(
                 "heading"
                 if node.heading_level is not None
                 else "list"
-                if xpath(original, "./w:pPr/w:numPr")
-                or "List"
-                in " ".join(e.get(qn("w:val"), "") for e in xpath(original, "./w:pPr/w:pStyle"))
+                if numbering is not None
                 else "body"
             )
         else:

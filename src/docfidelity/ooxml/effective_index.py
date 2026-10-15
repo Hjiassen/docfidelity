@@ -12,6 +12,48 @@ _DRAWING_TAGS = frozenset(
 )
 
 
+def paragraph_numbering(paragraph: Element, styles: Element | None) -> tuple[str, str] | None:
+    """按有效编号分类；直接值、样式链与文档默认值按优先级解析。"""
+    from docfidelity.contracts.errors import EngineError, ErrorCode
+
+    containers = [paragraph]
+    if styles is not None:
+        by_id = {e.get(qn("w:styleId"), ""): e for e in xpath(styles, "./w:style")}
+        reference = find_first(find_first(paragraph, "w:pPr"), "w:pStyle")
+        default = next(
+            (
+                e.get(qn("w:styleId"), "")
+                for e in by_id.values()
+                if e.get(qn("w:type")) == "paragraph" and e.get(qn("w:default")) == "1"
+            ),
+            "",
+        )
+        identifier = reference.get(qn("w:val"), "") if reference is not None else default
+        seen: set[str] = set()
+        while identifier in by_id:
+            if identifier in seen:
+                raise EngineError(ErrorCode.SCHEMA_INVALID, "所选段落样式继承循环")
+            seen.add(identifier)
+            style = by_id[identifier]
+            containers.append(style)
+            base = find_first(style, "w:basedOn")
+            identifier = base.get(qn("w:val"), "") if base is not None else ""
+        containers.extend(xpath(styles, "./w:docDefaults/w:pPrDefault"))
+    num_id: str | None = None
+    level: str | None = None
+    for container in containers:
+        for properties in xpath(container, "./w:pPr/w:numPr"):
+            pointer = find_first(properties, "w:numId")
+            indent = find_first(properties, "w:ilvl")
+            if num_id is None and pointer is not None:
+                num_id = pointer.get(qn("w:val"))
+            if level is None and indent is not None:
+                level = indent.get(qn("w:val"))
+    if num_id is None or num_id == "0":
+        return None
+    return num_id, level or "0"
+
+
 def supported_image(drawing: Element) -> bool:
     """仅支持不包含附加文本、图表或对象的单图片绘图。"""
     blips = xpath(drawing, ".//a:blip")
