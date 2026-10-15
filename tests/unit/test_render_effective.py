@@ -573,12 +573,22 @@ def test_explicit_neutral_table_supports_new_column_count(tmp_path: Path) -> Non
             },
         )
     )
-    tree = _tree(render_effective(directory, content, {}, tmp_path / "new.docx"))
+    generated = DocxPackage.open(render_effective(directory, content, {}, tmp_path / "new.docx"))
+    tree = generated.part("word/document.xml").read_tree
     table = xpath(tree, ".//w:tbl")[0]
     assert len(xpath(table, "./w:tblGrid/w:gridCol")) == 3
     assert [len(xpath(row, "./w:tc")) for row in xpath(table, "./w:tr")] == [3, 3]
     assert [text.text for text in xpath(table, ".//w:t")] == ["A", "B", "C", "D", "E", "F"]
-    assert not xpath(table, ".//w:tblStyle")
+    references = xpath(table, ".//w:tblStyle")
+    assert len(references) == 1
+    styles = [
+        style
+        for style in xpath(generated.part("word/styles.xml").read_tree, "./w:style")
+        if style.get(qn("w:styleId")) == references[0].get(qn("w:val"))
+        and style.get(qn("w:type")) == "table"
+    ]
+    assert len(styles) == 1
+    assert not xpath(styles[0], "./w:basedOn | .//w:pPr | .//w:rPr")
     assert all(run.get(qn("w:val")) == "0" for run in xpath(table, ".//w:rPr/w:i"))
     assert (
         sum(int(column.get(qn("w:w"))) for column in xpath(table, "./w:tblGrid/w:gridCol")) <= 8640
