@@ -312,6 +312,68 @@ def test_more_zip_boundaries(tmp_path: Path, source: bytes, kind: str, monkeypat
     assert response.status_code in {400, 413, 415, 422}
 
 
+@pytest.mark.parametrize(
+    ("encoding", "macro_type", "entities", "expected"),
+    [
+        ("utf-16", "application/vnd.ms-word.document.macroEnabled.main+xml", False, 415),
+        ("utf-16", "application/vnd.ms-office.vbaProject", False, 415),
+        ("utf-8", "application/vnd.ms-word.document.macroEnabled.main+xml", True, 415),
+        ("utf-16", None, False, 201),
+        ("utf-8", None, True, 201),
+    ],
+)
+def test_content_type_xml_encoding_and_entities(
+    tmp_path: Path,
+    source: bytes,
+    encoding: str,
+    macro_type: str | None,
+    entities: bool,
+    expected: int,
+) -> None:
+    from lxml import etree
+
+    rewritten = BytesIO()
+    with ZipFile(BytesIO(source)) as old, ZipFile(rewritten, "w") as new:
+        for info in old.infolist():
+            data = old.read(info)
+            if info.filename == "[Content_Types].xml":
+                root = etree.fromstring(data)
+                main = next(item for item in root if item.get("PartName") == "/word/document.xml")
+                if macro_type is not None:
+                    main.set("ContentType", macro_type)
+                data = etree.tostring(root, encoding=encoding, xml_declaration=True)
+                if entities:
+                    text = data.decode(encoding)
+                    value = main.get("ContentType")
+                    text = text.replace(value, "".join(f"&#{ord(char)};" for char in value))
+                    data = text.encode(encoding)
+            new.writestr(info, data)
+    response = client_at(tmp_path / "store").post(
+        "/api/v2/template-imports", files={"file": ("x.docx", rewritten.getvalue())}
+    )
+    assert response.status_code == expected, response.text
+
+
+@pytest.mark.parametrize(
+    "content_types", [b"<Types>", b'<!DOCTYPE Types [<!ENTITY kind "safe">]><Types>&kind;</Types>']
+)
+def test_content_types_malformed_or_dtd_is_rejected(
+    tmp_path: Path,
+    source: bytes,
+    content_types: bytes,
+) -> None:
+    rewritten = BytesIO()
+    with ZipFile(BytesIO(source)) as old, ZipFile(rewritten, "w") as new:
+        for info in old.infolist():
+            new.writestr(
+                info, content_types if info.filename == "[Content_Types].xml" else old.read(info)
+            )
+    response = client_at(tmp_path / "store").post(
+        "/api/v2/template-imports", files={"file": ("x.docx", rewritten.getvalue())}
+    )
+    assert response.status_code == 422, response.text
+
+
 def _process_save(root: str, draft: dict, gate, queue) -> None:
     gate.wait(20)
     queue.put(save(client_at(Path(root)), draft, draft["selection"]).status_code)

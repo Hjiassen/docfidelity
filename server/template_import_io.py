@@ -17,6 +17,7 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import BinaryIO
 from zipfile import BadZipFile, ZipFile
 
+from lxml import etree
 from PIL import Image, UnidentifiedImageError
 
 from docfidelity.contracts.errors import EngineError, ErrorCode
@@ -63,6 +64,21 @@ def logical_path(name: str) -> str:
     ):
         raise EngineError(ErrorCode.PATH_ESCAPE, "逻辑路径不安全")
     return posix.as_posix()
+
+
+def _validate_content_types(payload: bytes) -> None:
+    """解析实际属性值，统一处理 XML 编码和字符引用；不加载 DTD 或外部实体。"""
+    parser = etree.XMLParser(resolve_entities=False, load_dtd=False, no_network=True)
+    try:
+        root = etree.fromstring(payload, parser=parser)
+        if root.getroottree().docinfo.doctype:
+            raise EngineError(ErrorCode.TEMPLATE_UNREADABLE, "DOCX 内容类型不允许 DTD")
+        for element in root.iter():
+            content_type = element.get("ContentType", "").casefold()
+            if "macroenabled" in content_type or "vbaproject" in content_type:
+                raise EngineError(ErrorCode.UPLOAD_TYPE, "DOCX 含宏内容类型")
+    except etree.XMLSyntaxError as exc:
+        raise EngineError(ErrorCode.TEMPLATE_UNREADABLE, "DOCX 内容类型 XML 不可读取") from exc
 
 
 def validate_docx_zip(payload: bytes) -> tuple[str, ...]:
@@ -112,11 +128,8 @@ def validate_docx_zip(payload: bytes) -> tuple[str, ...]:
                             raise EngineError(ErrorCode.UPLOAD_SIZE, "ZIP 实际展开量超限")
                         if info.filename == "[Content_Types].xml":
                             content_types.extend(chunk)
-                if (
-                    b"macroenabled" in content_types.lower()
-                    or b"vbaproject" in content_types.lower()
-                ):
-                    raise EngineError(ErrorCode.UPLOAD_TYPE, "DOCX 含宏内容类型")
+                if info.filename == "[Content_Types].xml":
+                    _validate_content_types(bytes(content_types))
             names = tuple(info.filename for info in infos)
             if not {"[Content_Types].xml", "word/document.xml", "_rels/.rels"}.issubset(names):
                 raise EngineError(ErrorCode.UPLOAD_TYPE, "ZIP 不是 DOCX 文档")
