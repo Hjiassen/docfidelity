@@ -86,6 +86,14 @@ class SourceDefaults:
                 parent.remove(pointer)
         self.by_id = {e.get(qn("w:styleId"), ""): e for e in xpath(styles, "./w:style")}
         table_styles = [e for e in self.by_id.values() if e.get(qn("w:type")) == "table"]
+        self.neutral_table_style: str | None = None
+        if not formats.tables:
+            identifier = "DFNeutralTable"
+            while identifier in self.by_id:
+                identifier += "_"
+            self.neutral_table_style = identifier
+            neutral = sub(styles, "w:style", {"w:type": "table", "w:styleId": identifier})
+            sub(neutral, "w:name", {"w:val": identifier})
         if not formats.body:
             for style in table_styles:
                 for properties in xpath(style, ".//w:pPr | .//w:rPr"):
@@ -133,6 +141,15 @@ class SourceDefaults:
 
     def apply(self, element: Element, numbering: Element | None) -> None:
         """源默认值仅填充未被高优先级格式覆盖的属性；中性段落不接收它们。"""
+        if self.neutral_table_style is not None:
+            for table in element.iter(qn("w:tbl")):
+                properties = find_first(table, "w:tblPr")
+                if properties is None:
+                    properties = new_tree("w:tblPr")
+                    table.insert(0, properties)
+                for previous in xpath(properties, "./w:tblStyle"):
+                    properties.remove(previous)
+                properties.insert(0, new_tree("w:tblStyle", {"w:val": self.neutral_table_style}))
         for paragraph in element.iter(qn("w:p")):
             reference = find_first(find_first(paragraph, "w:pPr"), "w:pStyle")
             identifier = (

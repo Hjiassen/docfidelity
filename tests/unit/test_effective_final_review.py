@@ -9,7 +9,7 @@ from docx.enum.style import WD_STYLE_TYPE
 
 from docfidelity.contracts.imports import FormatSelection, VariableMapping
 from docfidelity.contracts.ir import ContentIR, ContentUnit
-from docfidelity.ooxml.doc import Element, new_tree, qn, sub, xpath
+from docfidelity.ooxml.doc import Element, new_tree, parse, qn, sub, xpath
 from docfidelity.ooxml.package import DocxPackage
 from docfidelity.registry.candidates import inspect_template
 from docfidelity.registry.freeze import freeze_template
@@ -251,8 +251,6 @@ def test_numbering_disabled_does_not_restore_document_default_pointer(tmp_path: 
     for part in frozen.parts():
         if part.path.endswith(".xml"):
             assert not xpath(part.read_tree, ".//w:numPr"), part.path
-    from docfidelity.ooxml.doc import parse
-
     for prototype in version.prototypes:
         assert not xpath(parse((directory / prototype.path).read_bytes()), ".//w:numPr")
     output = render_effective(
@@ -294,8 +292,16 @@ def _effective_properties(
         merge(defaults)
     tables = list(paragraph.iterancestors(qn("w:tbl")))
     if tables:
-        for reference in xpath(tables[0], "./w:tblPr/w:tblStyle"):
-            table_identifier = reference.get(qn("w:val"))
+        table_identifiers = [
+            reference.get(qn("w:val")) for reference in xpath(tables[0], "./w:tblPr/w:tblStyle")
+        ]
+        if not table_identifiers:
+            table_identifiers = [
+                style.get(qn("w:styleId"))
+                for style in xpath(styles, './w:style[@w:type="table"]')
+                if style.get(qn("w:default")) in {"1", "true", "on"}
+            ]
+        for table_identifier in table_identifiers:
             table_chain = []
             while table_identifier:
                 current = xpath(styles, f'./w:style[@w:styleId="{table_identifier}"]')[0]
@@ -498,3 +504,54 @@ def test_defaults_isolation_preserves_table_and_numbering_precedence(
     if body_enabled:
         assert _effective_properties(frozen, bullet, "pPr")["ind"]["left"] == "1440"
         assert _effective_properties(frozen, paragraph, "pPr")["ind"]["left"] == "720"
+
+
+@pytest.mark.parametrize("tables_enabled", [False, True])
+def test_neutral_table_isolates_default_table_style_after_freeze_and_render(
+    tmp_path: Path, tables_enabled: bool
+) -> None:
+    document = Document()
+    document.add_paragraph("BODY")
+    document.add_table(rows=1, cols=1).cell(0, 0).text = "CELL"
+    source = tmp_path / "source.docx"
+    document.save(source)
+    package = DocxPackage.open(source, read_only=False)
+    styles = package.part("word/styles.xml").tree
+    defaults = xpath(styles, "./w:docDefaults")[0]
+    sub(xpath(defaults, "./w:rPrDefault/w:rPr")[0], "w:vanish")
+    ppr = xpath(defaults, "./w:pPrDefault/w:pPr")[0]
+    sub(sub(ppr, "w:pBdr"), "w:bottom", {"w:val": "single", "w:sz": "8"})
+    package.save(source)
+    selection = default_selection(inspect_template(source, import_id="review"))
+    selection.formats = FormatSelection(tables=tables_enabled, body=True, heading=False)
+    directory = tmp_path / "bundle"
+    version = freeze_template(source, selection, directory, template_id="t", version=1, name="T")
+    frozen = DocxPackage.open(directory / "effective.docx")
+    prototype = next(
+        p for p in version.prototypes if p.prototype_id == version.format_bindings.tables[0]
+    )
+    table = parse((directory / prototype.path).read_bytes())
+    for paragraph in xpath(table, ".//w:p"):
+        assert _effective_properties(frozen, paragraph, "rPr").get("vanish", {}).get(
+            "val", "0"
+        ) == ("1" if tables_enabled else "0")
+        assert ("pBdr" in _effective_properties(frozen, paragraph, "pPr")) == tables_enabled
+    source.unlink()
+    output = render_effective(
+        directory,
+        _ir(
+            ContentUnit(
+                unit_id="t", type="table", fields={"columns": ["A"], "rows": [["Fresh cell"]]}
+            )
+        ),
+        {},
+        tmp_path / "out.docx",
+    )
+    rendered = DocxPackage.open(output)
+    root = rendered.part("word/document.xml").read_tree
+    for text in ("A", "Fresh cell"):
+        paragraph = xpath(root, f'.//w:p[w:r/w:t="{text}"]')[0]
+        assert _effective_properties(rendered, paragraph, "rPr").get("vanish", {}).get(
+            "val", "0"
+        ) == ("1" if tables_enabled else "0")
+        assert ("pBdr" in _effective_properties(rendered, paragraph, "pPr")) == tables_enabled

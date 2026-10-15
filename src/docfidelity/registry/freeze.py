@@ -198,6 +198,8 @@ def _write_prototypes(
             raise EngineError(ErrorCode.SCHEMA_INVALID, "所选页面尺寸不能承载中性表格") from exc
         table = new_tree("w:tbl")
         properties = sub(table, "w:tblPr")
+        assert sanitized.defaults is not None and sanitized.defaults.neutral_table_style is not None
+        sub(properties, "w:tblStyle", {"w:val": sanitized.defaults.neutral_table_style})
         sub(properties, "w:tblW", {"w:w": str(width), "w:type": "dxa"})
         sub(properties, "w:tblLayout", {"w:type": "fixed"})
         sub(sub(table, "w:tblGrid"), "w:gridCol", {"w:w": str(width)})

@@ -256,6 +256,7 @@ def sanitize_template(
                 )
     if not target.has_part("word/styles.xml"):
         styles = new_tree("w:styles")
+        source_defaults = SourceDefaults(styles, selection.formats)
         add_neutral_styles(styles)
         target.add_xml_part(
             "word/styles.xml",
