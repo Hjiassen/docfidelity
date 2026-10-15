@@ -26,6 +26,7 @@ for its terms. Notably:
   - python-docx / lxml  (MIT / BSD-style)
   - openai-agents       (MIT, `extras: model`)
   - FastAPI / SQLAlchemy / sse-starlette (MIT, `extras: server`)
+  - Pillow              (MIT-CMU, `extras: server`)
   - PyMuPDF             (AGPL-3.0 or commercial, `extras: office`)
   - pywin32             (PSF-style, `extras: office`, Windows only)
   - pypdfium2           (BSD-3-Clause / Apache-2.0, `extras: preview`)

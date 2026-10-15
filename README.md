@@ -4,7 +4,7 @@
 
 # docfidelity
 
-**将同一批事实数据按既有 Word 模板生成多份 DOCX，并附来源追溯与质量报告。**
+**复用已有 Word 中选定的格式，用新材料生成不含旧业务内容的文档。**
 
 [![CI](https://github.com/Hjiassen/docfidelity/actions/workflows/ci.yml/badge.svg)](https://github.com/Hjiassen/docfidelity/actions/workflows/ci.yml) [![Version](https://img.shields.io/badge/Version-0.0.1%20Alpha-orange.svg)](CHANGELOG.md) [![Python](https://img.shields.io/badge/Python-3.11--3.12-3776AB.svg?logo=python&logoColor=white)](pyproject.toml) [![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED.svg?logo=docker&logoColor=white)](deploy/compose.yml) [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 
@@ -13,6 +13,8 @@
 [快速开始](#快速开始) | [产物预览](#产物预览) | [使用指南](docs/guide/README.md) | [部署指南](deploy/README.md)
 
 </div>
+
+V2 正在按[重构方案](docs/设计/产品重构方案.md)实施：M0/M1 已实现有效模板导入、选择、清理、冻结与渲染 API，试用见[有效模板指南](docs/guide/effective-templates.md)。下方快速开始和截图对应可运行的旧链路；新版模型撰写与浏览器工作台分别在 M2、M3，状态见[路线图](ROADMAP.md)及[验收](docs/验收/P0-验收自检.md)。
 
 ## 快速开始
 

@@ -4,7 +4,7 @@
 
 # docfidelity
 
-**Turn one set of source facts into multiple DOCX documents using your Word templates, with source traceability and quality reports.**
+**Reuse selected formatting from an existing Word document and generate a new document from new source material, without copying the old business content.**
 
 [![CI](https://github.com/Hjiassen/docfidelity/actions/workflows/ci.yml/badge.svg)](https://github.com/Hjiassen/docfidelity/actions/workflows/ci.yml) [![Version](https://img.shields.io/badge/Version-0.0.1%20Alpha-orange.svg)](CHANGELOG.md) [![Python](https://img.shields.io/badge/Python-3.11--3.12-3776AB.svg?logo=python&logoColor=white)](pyproject.toml) [![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED.svg?logo=docker&logoColor=white)](deploy/compose.yml) [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 
@@ -13,6 +13,8 @@
 [Quick Start](#quick-start) | [Output Preview](#output-preview) | [User Guide](docs/guide/README.md) | [Deployment](deploy/README.md)
 
 </div>
+
+V2 is being implemented according to the [redesign](docs/设计/产品重构方案.md). M0/M1 implement effective-template import, selection, cleanup, freezing, and rendering APIs; see the [API guide](docs/guide/effective-templates.md). The quick start and screenshots below show the running legacy workflow. New content generation and the browser workspace belong to M2 and M3; see the [roadmap](ROADMAP.md) and [acceptance notes](docs/验收/P0-验收自检.md).
 
 ## Quick Start
 
