@@ -89,6 +89,9 @@ reference = "docfidelity.builder.stages:provide"
 [project.entry-points."docfidelity.model_adapters"]
 openai = "docfidelity.agents.sdk_adapter:OpenAIAgentsAdapter"
 
+[project.entry-points."docfidelity.content_generators"]
+openai = "docfidelity.agents.writing:OpenAIContentGenerator"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/docfidelity"]
 # Twine 6 校验支持至 2.4；显式固定，避免构建后端默认值升级破坏发布。
