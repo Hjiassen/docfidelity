@@ -3821,6 +3821,16 @@ export interface components {
             /** Style Id */
             style_id: string;
         };
+        /**
+         * ImageExtent
+         * @description 原件单次图片出现的可信显示尺寸，单位 EMU。
+         */
+        ImageExtent: {
+            /** Cx */
+            cx: number;
+            /** Cy */
+            cy: number;
+        };
         /** ImportDraft */
         ImportDraft: {
             /** Candidates */
@@ -4139,7 +4149,7 @@ export interface components {
         };
         /**
          * MaterialBlock
-         * @description 新材料中的一个语义块；locator 定位原始输入。
+         * @description 新材料语义与原件可信元数据；旧快照可省略图片尺寸。
          */
         MaterialBlock: {
             /** Block Id */
@@ -4151,6 +4161,7 @@ export interface components {
              * @default 1.0.0
              */
             format_version: string;
+            image_extent?: components["schemas"]["ImageExtent"] | null;
             /** Image Ref */
             image_ref?: string | null;
             /** Items */

@@ -1,8 +1,147 @@
 {
   "$defs": {
+    "ImageExtent": {
+      "additionalProperties": false,
+      "description": "原件单次图片出现的可信显示尺寸，单位 EMU。",
+      "properties": {
+        "cx": {
+          "exclusiveMinimum": 0,
+          "title": "Cx",
+          "type": "integer"
+        },
+        "cy": {
+          "exclusiveMinimum": 0,
+          "title": "Cy",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "cx",
+        "cy"
+      ],
+      "title": "ImageExtent",
+      "type": "object"
+    },
     "MaterialBlock": {
       "additionalProperties": false,
-      "description": "新材料中的一个语义块；locator 定位原始输入。",
+      "description": "新材料语义与原件可信元数据；旧快照可省略图片尺寸。",
+      "properties": {
+        "block_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+          "title": "Block Id",
+          "type": "string"
+        },
+        "columns": {
+          "items": {
+            "maxLength": 100000,
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Columns",
+          "type": "array"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "image_extent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ImageExtent"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "image_ref": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_./-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Image Ref"
+        },
+        "items": {
+          "items": {
+            "maxLength": 100000,
+            "type": "string"
+          },
+          "maxItems": 2000,
+          "title": "Items",
+          "type": "array"
+        },
+        "kind": {
+          "enum": [
+            "heading",
+            "para",
+            "bullets",
+            "numbered",
+            "table",
+            "figure"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "level": {
+          "anyOf": [
+            {
+              "maximum": 9,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Level"
+        },
+        "locator": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Locator",
+          "type": "string"
+        },
+        "rows": {
+          "items": {
+            "items": {
+              "maxLength": 100000,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "maxItems": 2000,
+          "title": "Rows",
+          "type": "array"
+        },
+        "text": {
+          "default": "",
+          "maxLength": 100000,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "block_id",
+        "kind",
+        "locator"
+      ],
+      "title": "MaterialBlock",
+      "type": "object"
+    },
+    "SemanticMaterialBlock": {
+      "additionalProperties": false,
+      "description": "供正文模型读取的材料语义，不含原件几何。",
       "properties": {
         "block_id": {
           "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
@@ -103,7 +242,7 @@
         "kind",
         "locator"
       ],
-      "title": "MaterialBlock",
+      "title": "SemanticMaterialBlock",
       "type": "object"
     },
     "SourceMaterial": {
@@ -176,6 +315,7 @@
   "x-contract-family": "materials",
   "x-contract-models": [
     "MaterialBlock",
+    "SemanticMaterialBlock",
     "SourceMaterial"
   ]
 }

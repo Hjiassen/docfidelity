@@ -4047,6 +4047,28 @@
         "title": "HeadingBinding",
         "type": "object"
       },
+      "ImageExtent": {
+        "additionalProperties": false,
+        "description": "原件单次图片出现的可信显示尺寸，单位 EMU。",
+        "properties": {
+          "cx": {
+            "exclusiveMinimum": 0.0,
+            "title": "Cx",
+            "type": "integer"
+          },
+          "cy": {
+            "exclusiveMinimum": 0.0,
+            "title": "Cy",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cx",
+          "cy"
+        ],
+        "title": "ImageExtent",
+        "type": "object"
+      },
       "ImportDraft": {
         "additionalProperties": false,
         "properties": {
@@ -4711,7 +4733,7 @@
       },
       "MaterialBlock": {
         "additionalProperties": false,
-        "description": "新材料中的一个语义块；locator 定位原始输入。",
+        "description": "新材料语义与原件可信元数据；旧快照可省略图片尺寸。",
         "properties": {
           "block_id": {
             "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
@@ -4731,6 +4753,16 @@
             "default": "1.0.0",
             "title": "Format Version",
             "type": "string"
+          },
+          "image_extent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImageExtent"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "image_ref": {
             "anyOf": [
