@@ -337,3 +337,46 @@ def test_numeric_substring_cannot_claim_smaller_value_from_larger_number():
         doc, [source], section_id, Generator(WritingResult(section=candidate))
     )
     assert result.error and result.section.blocks[0].text == "1000"
+
+
+@pytest.mark.parametrize(
+    "columns,rows",
+    [
+        (["团队", "工期天"], [["甲", "100"], ["乙", "200"]]),
+        (["团队", "预算万元"], []),
+        (["团队", "预算万元"], [["甲", "100"]]),
+    ],
+)
+def test_model_table_cannot_change_numeric_meaning_or_drop_source_rows(columns, rows):
+    source = ingest_text(
+        "| 团队 | 预算万元 |\n|---|---|\n| 甲 | 100 |\n| 乙 | 200 |",
+        name="预算.md",
+        material_id="m1",
+        markdown=True,
+    )
+    doc = document(outline=suggest_outline([source]), outline_confirmed=True)
+    section_id = doc.outline[0].section_id
+    candidate = SectionDraft(
+        section_id=section_id,
+        blocks=[DraftBlock(kind="table", columns=columns, rows=rows, source_refs=["m1/b0001"])],
+    )
+    result = generate_section(
+        doc, [source], section_id, Generator(WritingResult(section=candidate))
+    )
+    assert result.error and result.pending
+    assert result.section.blocks[0].columns == ["团队", "预算万元"]
+    assert result.section.blocks[0].rows == [["甲", "100"], ["乙", "200"]]
+
+
+def test_long_material_heading_has_bounded_rule_title_pending_and_intact_source():
+    heading = "新" * 513
+    source = ingest_text(f"# {heading}\n正文。", name="新材料.md", material_id="m1", markdown=True)
+    for mode in ["format_only", "organize"]:
+        result = generate_outline(document(mode=mode), [source], None)
+        assert 0 < len(result.outline[0].title) <= 512
+        assert result.outline[0].source_refs == ["m1/b0001", "m1/b0002"]
+        assert any("标题" in item and "待确认" in item for item in result.pending)
+        assert source.blocks[0].text == heading
+        doc = document(mode=mode, outline=result.outline, outline_confirmed=True)
+        section = generate_section(doc, [source], result.outline[0].section_id, None)
+        assert section.section.blocks[0].text == "正文。"

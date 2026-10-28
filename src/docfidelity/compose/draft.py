@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections import Counter
+
 from pydantic import ValidationError
 
 from docfidelity.contracts.documents import DocumentDraft, DraftBlock, OutlineSection, SectionDraft
@@ -56,6 +58,11 @@ def validate_section(section: SectionDraft, outline: OutlineSection, index: Mate
             s.image_ref for s in sources if s.kind == "figure"
         }:
             raise EngineError(ErrorCode.SCHEMA_INVALID, "图片不属于所引材料")
+        if block.kind == StructureKind.TABLE.value and any(
+            source.kind == StructureKind.TABLE.value and block.columns != source.columns
+            for source in sources
+        ):
+            raise EngineError(ErrorCode.SCHEMA_INVALID, "表格列头与所引材料不一致")
         texts = (
             [" | ".join(block.columns), *(" | ".join(row) for row in block.rows)]
             if block.kind == StructureKind.TABLE.value
@@ -71,6 +78,13 @@ def validate_section(section: SectionDraft, outline: OutlineSection, index: Mate
                 ref in block.source_refs
                 and block.kind == source.kind
                 and (source.image_ref is None or block.image_ref == source.image_ref)
+                and (
+                    source.kind != StructureKind.TABLE.value
+                    or (
+                        block.columns == source.columns
+                        and Counter(map(tuple, source.rows)) <= Counter(map(tuple, block.rows))
+                    )
+                )
                 for block in section.blocks
             ):
                 raise EngineError(ErrorCode.SCHEMA_INVALID, "模型遗漏表格或图片，不能静默丢弃材料")

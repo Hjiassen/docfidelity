@@ -74,11 +74,17 @@ def suggest_outline(materials: list[SourceMaterial]) -> list[OutlineSection]:
         for block in material.blocks:
             ref = f"{material.material_id}/{block.block_id}"
             if current is None or block.kind == "heading":
-                current = OutlineSection(
-                    section_id="s-" + sha256(ref.encode()).hexdigest()[:24],
-                    title=block.text if block.kind == "heading" else material.name,
-                    level=block.level or 1,
-                )
+                title = block.text if block.kind == "heading" else material.name
+                try:
+                    current = OutlineSection(
+                        section_id="s-" + sha256(ref.encode()).hexdigest()[:24],
+                        title=title if len(title) <= 512 else title[:511] + "…",
+                        level=block.level or 1,
+                    )
+                except ValidationError as exc:
+                    raise EngineError(
+                        ErrorCode.SCHEMA_INVALID, "材料无法转换为合法规则大纲"
+                    ) from exc
                 result.append(current)
             current.source_refs.append(ref)
     return result
@@ -88,6 +94,8 @@ def rule_pending(document: DocumentDraft, materials: list[SourceMaterial]) -> li
     """材料自身问题与只有项目名的缺项必须贯通。"""
     pending = [p for material in materials for p in material.pending]
     blocks = [block for m in materials for block in m.blocks]
+    if any(block.kind == "heading" and len(block.text) > 512 for block in blocks):
+        pending.append("待确认：材料标题超过大纲长度上限，已缩短显示；完整原文保留在来源引用。")
     if len(blocks) == 1 and blocks[0].text.strip() == document.name.strip():
         pending.append("待确认：仅有项目名，缺少正文材料，未补写业务事实。")
     return list(dict.fromkeys(pending))
