@@ -23,6 +23,7 @@ dependency set is declared in pyproject.toml; consult each upstream project
 for its terms. Notably:
 
   - pydantic            (MIT)
+  - markdown-it-py      (MIT, CommonMark and table parsing)
   - python-docx / lxml  (MIT / BSD-style)
   - openai-agents       (MIT, `extras: model`)
   - FastAPI / SQLAlchemy / sse-starlette (MIT, `extras: server`)

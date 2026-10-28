@@ -27,6 +27,7 @@ dependencies = [
     "pydantic>=2.7,<3",
     "python-docx>=1.1,<2",
     "lxml>=5,<6",
+    "markdown-it-py>=4.0,<5",
     # DD-10.1：门禁规则以 YAML 为声明载体（内置规则集随包分发），故属核心依赖。
     "PyYAML>=6,<7",
 ]
