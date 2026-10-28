@@ -23,7 +23,6 @@ from docfidelity.ooxml.doc import qn, xpath
 from docfidelity.ooxml.package import DocxPackage
 from docfidelity.pipeline.materials import ingest_material
 from docfidelity.render.effective import render_effective
-from tests.unit.test_content_adapter_v2 import generator, response
 from tests.unit.test_render_effective import _bundle
 
 pytestmark = pytest.mark.unit
@@ -133,6 +132,9 @@ def test_displayed_sizes_follow_source_occurrences_through_actual_render(tmp_pat
 
 
 def test_actual_model_payload_and_draft_cannot_receive_or_set_geometry():
+    pytest.importorskip("openai")
+    from tests.unit.test_content_adapter_v2 import generator, response
+
     source, _ = ingest_material(image_docx(), name="new.docx", material_id="m")
     doc = draft(source, mode="organize")
     calls = []
@@ -278,6 +280,9 @@ def test_old_material_snapshots_without_geometry_remain_readable():
 
 
 def test_provider_geometry_output_is_rejected_instead_of_adopted():
+    pytest.importorskip("openai")
+    from tests.unit.test_content_adapter_v2 import generator, response
+
     source, _ = ingest_material(image_docx(), name="new.docx", material_id="m")
     doc = draft(source, mode="organize")
     section = generate_section(doc, [source], doc.outline[0].section_id, None).section

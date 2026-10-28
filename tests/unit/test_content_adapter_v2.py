@@ -6,12 +6,12 @@ import json
 
 import httpx
 import pytest
-from openai import OpenAI
 
 from docfidelity.agents.writing import OpenAIContentGenerator
 from docfidelity.contracts.generation import WritingRequest
 from docfidelity.ingest.materials import ingest_text
 
+OpenAI = pytest.importorskip("openai").OpenAI
 pytestmark = pytest.mark.unit
 
 
