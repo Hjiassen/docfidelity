@@ -12,7 +12,7 @@ from typing import Any
 from pydantic import Field
 
 from docfidelity.contracts.base import FormatModel
-from docfidelity.contracts.documents import OutlineSection, SectionDraft
+from docfidelity.contracts.documents import MAX_DOCUMENT_SECTIONS, OutlineSection, SectionDraft
 from docfidelity.contracts.errors import EngineError, ErrorCode
 from docfidelity.contracts.generation import CONTENT_PROMPT_VERSION, WritingRequest, WritingResult
 
@@ -20,7 +20,7 @@ PROMPT_VERSION = CONTENT_PROMPT_VERSION
 
 
 class _OutlineOutput(FormatModel):
-    outline: list[OutlineSection] = Field(min_length=1, max_length=500)
+    outline: list[OutlineSection] = Field(min_length=1, max_length=MAX_DOCUMENT_SECTIONS)
 
 
 class _SectionOutput(FormatModel):

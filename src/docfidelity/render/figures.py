@@ -8,8 +8,8 @@
    一处。
 2. **只缩不放**。小图放大是"样式保真"的直接破坏：模板里一像素对一像素的截图
    放大后糊成一片。故所有缩放路径都走 ``fit_picture``（``allow_grow`` 默认 False）。
-3. **尺寸只从 IR 拿像素 + DPI，换算在渲染层做**（``FigureData`` 契约）。IR 里出现
-   twips 或 EMU 就是样式痕迹泄漏。
+3. **普通尺寸从 IR 拿像素 + DPI，换算在渲染层做**。原件图片可携带可信显示上限，
+   不允许模型设置几何；两种尺寸声明互斥。
 
 文档级缩放默认关闭 —— 一个不显然但重要的取舍
 --------------------------------------------
@@ -115,6 +115,7 @@ def figure_data_of(unit: ContentUnit) -> FigureData:
         width_px=width if isinstance(width, int) else None,
         height_px=height if isinstance(height, int) else None,
         dpi=dpi if isinstance(dpi, int) and dpi > 0 else 96,
+        image_extent=fields.get("image_extent"),
     )
 
 
@@ -300,6 +301,8 @@ def _bind_caption(
 
 def _declared_box(data: FigureData) -> tuple[int, int] | None:
     """IR 声明尺寸 -> EMU；未声明返回 ``None``（交给 ``place_picture`` 读图片头）。"""
+    if data.image_extent is not None:
+        return data.image_extent.cx, data.image_extent.cy
     if data.width_px is None or data.height_px is None:
         return None
     return (

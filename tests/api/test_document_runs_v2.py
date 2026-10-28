@@ -250,6 +250,7 @@ def test_independent_worker_once_consumes_v2_queue(tmp_path):
         env=env,
         capture_output=True,
         text=True,
+        encoding="utf-8",
         timeout=35,
     )
     assert process.returncode == 0, process.stderr

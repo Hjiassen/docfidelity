@@ -5,15 +5,32 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Literal, Protocol
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 from typing_extensions import Self
 
 from .base import FormatModel
-from .documents import DocumentDraft, OutlineSection, SectionDraft
+from .documents import MAX_DOCUMENT_SECTIONS, DocumentDraft, OutlineSection, SectionDraft
 from .errors import EngineErrorInfo
-from .materials import BlockKind, Digest, Identifier, Pending, SourceMaterial
+from .materials import BlockKind, Digest, Identifier, Pending, SemanticMaterialBlock, SourceMaterial
 
 CONTENT_PROMPT_VERSION = "writing-v2-1"
+
+
+class WritingMaterial(FormatModel):
+    """模型专用材料视图，不允许读取或设置可信原件几何。"""
+
+    material_id: Identifier
+    name: str = Field(min_length=1, max_length=512)
+    media_type: Literal["text", "markdown", "docx"]
+    digest: Digest
+    blocks: list[SemanticMaterialBlock] = Field(min_length=1, max_length=2000)
+    pending: list[Pending] = Field(default_factory=list, max_length=2000)
+
+    @model_validator(mode="after")
+    def validate_material(self) -> Self:
+        """复用完整材料的 ID 和总量边界。"""
+        SourceMaterial.model_validate(self.model_dump())
+        return self
 
 
 class WritingRequest(FormatModel):
@@ -22,10 +39,23 @@ class WritingRequest(FormatModel):
     task: Literal["outline", "section"]
     name: str = Field(min_length=1, max_length=512)
     instructions: str = Field(max_length=20_000)
-    materials: list[SourceMaterial] = Field(min_length=1, max_length=100)
-    outline: list[OutlineSection] = Field(default_factory=list, max_length=500)
+    materials: list[WritingMaterial] = Field(min_length=1, max_length=100)
+    outline: list[OutlineSection] = Field(default_factory=list, max_length=MAX_DOCUMENT_SECTIONS)
     section_id: Identifier | None = None
     capabilities: list[BlockKind] = Field(default_factory=list, max_length=6)
+
+    @field_validator("materials", mode="before")
+    @classmethod
+    def semantic_materials(cls, value: Any) -> Any:
+        """在协议边界移除可信元数据，提供者永远拿不到原件几何。"""
+        if not isinstance(value, list):
+            return value
+        return [
+            material.model_dump(exclude={"blocks": {"__all__": {"image_extent"}}})
+            if isinstance(material, SourceMaterial)
+            else material
+            for material in value
+        ]
 
     @model_validator(mode="after")
     def validate_request(self) -> Self:
@@ -42,7 +72,7 @@ class WritingRequest(FormatModel):
 class WritingResult(FormatModel):
     """生成候选；消费者必须检查来源与数字支持后才能采用。"""
 
-    outline: list[OutlineSection] = Field(default_factory=list, max_length=500)
+    outline: list[OutlineSection] = Field(default_factory=list, max_length=MAX_DOCUMENT_SECTIONS)
     section: SectionDraft | None = None
     pending: list[Pending] = Field(default_factory=list, max_length=2000)
     model: str | None = Field(default=None, max_length=512)
@@ -94,7 +124,9 @@ class GenerationRun(FormatModel):
     result_revision: int | None = Field(default=None, ge=1)
     result_document: DocumentDraft | None = None
     artifact_ids: list[Identifier] = Field(default_factory=list, max_length=1000)
-    section_checkpoints: list[SectionDraft] = Field(default_factory=list, max_length=500)
+    section_checkpoints: list[SectionDraft] = Field(
+        default_factory=list, max_length=MAX_DOCUMENT_SECTIONS
+    )
     error: EngineErrorInfo | None = None
     created_at: datetime | None = None
     started_at: datetime | None = None

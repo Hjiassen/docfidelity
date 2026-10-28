@@ -7,7 +7,7 @@ from hashlib import sha256
 
 from pydantic import ValidationError
 
-from docfidelity.contracts.documents import DocumentDraft, OutlineSection
+from docfidelity.contracts.documents import MAX_DOCUMENT_SECTIONS, DocumentDraft, OutlineSection
 from docfidelity.contracts.errors import EngineError, ErrorCode
 from docfidelity.contracts.generation import ContentGenerator, WritingRequest, WritingResult
 from docfidelity.contracts.materials import BlockKind, MaterialBlock, SourceMaterial
@@ -74,6 +74,10 @@ def suggest_outline(materials: list[SourceMaterial]) -> list[OutlineSection]:
         for block in material.blocks:
             ref = f"{material.material_id}/{block.block_id}"
             if current is None or block.kind == "heading":
+                if len(result) >= MAX_DOCUMENT_SECTIONS:
+                    raise EngineError(
+                        ErrorCode.SCHEMA_INVALID, "材料规则大纲超过章节上限，不得截断材料"
+                    )
                 title = block.text if block.kind == "heading" else material.name
                 try:
                     current = OutlineSection(
@@ -134,13 +138,15 @@ def generate_outline(
             error="模型未启用",
         )
     try:
-        request = WritingRequest(
-            task="outline",
-            name=document.name,
-            instructions=document.instructions,
-            materials=materials,
-            outline=document.outline,
-            capabilities=SEMANTIC_KINDS,
+        request = WritingRequest.model_validate(
+            dict(
+                task="outline",
+                name=document.name,
+                instructions=document.instructions,
+                materials=materials,
+                outline=document.outline,
+                capabilities=SEMANTIC_KINDS,
+            )
         )
     except ValidationError as exc:
         raise EngineError(ErrorCode.SCHEMA_INVALID, "生成请求超出限制，不得截断材料") from exc

@@ -296,8 +296,12 @@ def _image(blocks: FrozenBlocks, unit: ContentUnit) -> list[Element]:
         avail_w_emu=twips_to_emu(width),
         avail_h_emu=twips_to_emu(height),
         owner=blocks.version.format_bindings.insertion_part,
-        cx_emu=pixels_to_emu(data.width_px, data.dpi) if data.width_px is not None else None,
-        cy_emu=pixels_to_emu(data.height_px, data.dpi) if data.height_px is not None else None,
+        cx_emu=data.image_extent.cx
+        if data.image_extent
+        else (pixels_to_emu(data.width_px, data.dpi) if data.width_px is not None else None),
+        cy_emu=data.image_extent.cy
+        if data.image_extent
+        else (pixels_to_emu(data.height_px, data.dpi) if data.height_px is not None else None),
         alt_text=data.caption,
     )
     return [paragraph] + ([blocks.body(data.caption)] if data.caption else [])

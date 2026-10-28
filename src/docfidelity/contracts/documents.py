@@ -10,6 +10,8 @@ from typing_extensions import Self
 from .base import FormatModel
 from .materials import AssetRef, Identifier, MaterialBlock, Pending, SourceRef, Text
 
+MAX_DOCUMENT_SECTIONS = 500
+
 
 class OutlineSection(FormatModel):
     """用户可确认、重排的大纲项。"""
@@ -65,9 +67,9 @@ class DocumentDraft(FormatModel):
     material_ids: list[Identifier] = Field(min_length=1, max_length=100)
     mode: Literal["format_only", "organize"]
     instructions: str = Field(default="", max_length=20_000)
-    outline: list[OutlineSection] = Field(default_factory=list, max_length=500)
+    outline: list[OutlineSection] = Field(default_factory=list, max_length=MAX_DOCUMENT_SECTIONS)
     outline_confirmed: bool = False
-    sections: list[SectionDraft] = Field(default_factory=list, max_length=500)
+    sections: list[SectionDraft] = Field(default_factory=list, max_length=MAX_DOCUMENT_SECTIONS)
     variables: dict[str, Text] = Field(default_factory=dict, max_length=100)
     pending: list[Pending] = Field(default_factory=list, max_length=2000)
 

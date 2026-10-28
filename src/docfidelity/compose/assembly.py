@@ -26,10 +26,30 @@ def _unit(block: DraftBlock, unit_id: str, index: MaterialIndex, *, edited: bool
         fields = {"items": block.items}
     elif block.image_ref:
         fields = {"image_ref": block.image_ref, "caption": block.text or None}
+        sources = [
+            index[r][1] for r in block.source_refs if index[r][1].image_ref == block.image_ref
+        ]
+        if not sources:
+            sources = [
+                source for _, source in index.values() if source.image_ref == block.image_ref
+            ]
+        extents = [
+            source.image_extent
+            for source in sources
+            if source.kind == "figure"
+            and source.image_ref == block.image_ref
+            and source.image_extent is not None
+        ]
+        if extents:
+            fields["image_extent"] = {
+                "cx": min(e.cx for e in extents),
+                "cy": min(e.cy for e in extents),
+            }
     exact = any(
         block.model_dump(exclude={"source_refs"})
         == DraftBlock.model_validate(
-            index[r][1].model_dump(exclude={"block_id", "locator", "level"}) | {"source_refs": [r]}
+            index[r][1].model_dump(exclude={"block_id", "locator", "level", "image_extent"})
+            | {"source_refs": [r]}
         ).model_dump(exclude={"source_refs"})
         for r in block.source_refs
         if index[r][1].kind != "heading"

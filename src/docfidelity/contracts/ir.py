@@ -19,9 +19,11 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Any, ClassVar, Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
+from typing_extensions import Self
 
 from .base import FormatModel
+from .materials import ImageExtent
 
 UnitType = Literal[
     "heading",
@@ -83,7 +85,7 @@ class TableData(FormatModel):
 class FigureData(FormatModel):
     """``type == "figure"`` / ``"screenshot"`` 时 ``fields`` 的约定结构。
 
-    尺寸只给**像素 + DPI**，不给 twips——换算与等比缩放属渲染层职责（DD-4.4）。
+    普通事实使用像素 + DPI；原件图片可携带可信显示上限，等比缩放属渲染层职责。
     """
 
     image_ref: str = Field(description="工作区内图片逻辑名，由 ingest 落盘并登记")
@@ -92,6 +94,16 @@ class FigureData(FormatModel):
     width_px: int | None = None
     height_px: int | None = None
     dpi: int = Field(default=96, gt=0)
+    image_extent: ImageExtent | None = None
+
+    @model_validator(mode="after")
+    def validate_extent(self) -> Self:
+        """可信原件尺寸和像素声明不能同时决定显示大小。"""
+        if self.image_extent is not None and (
+            self.width_px is not None or self.height_px is not None
+        ):
+            raise ValueError("图片不得混用原件显示尺寸与像素尺寸")
+        return self
 
 
 class ContentUnit(FormatModel):

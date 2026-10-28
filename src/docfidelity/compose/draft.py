@@ -33,7 +33,8 @@ def rule_section(section: OutlineSection, index: MaterialIndex) -> SectionDraft:
             continue
         blocks.append(
             DraftBlock.model_validate(
-                source.model_dump(exclude={"block_id", "locator", "level"}) | {"source_refs": [ref]}
+                source.model_dump(exclude={"block_id", "locator", "level", "image_extent"})
+                | {"source_refs": [ref]}
             )
         )
     return SectionDraft(
@@ -115,14 +116,16 @@ def generate_section(
             error="模型未启用",
         )
     try:
-        request = WritingRequest(
-            task="section",
-            name=document.name,
-            instructions=document.instructions,
-            materials=materials,
-            outline=document.outline,
-            section_id=section_id,
-            capabilities=SEMANTIC_KINDS,
+        request = WritingRequest.model_validate(
+            dict(
+                task="section",
+                name=document.name,
+                instructions=document.instructions,
+                materials=materials,
+                outline=document.outline,
+                section_id=section_id,
+                capabilities=SEMANTIC_KINDS,
+            )
         )
     except ValidationError as exc:
         raise EngineError(ErrorCode.SCHEMA_INVALID, "生成请求超出限制，不得截断材料") from exc

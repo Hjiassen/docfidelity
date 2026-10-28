@@ -13,6 +13,8 @@ from docfidelity.contracts.materials import BlockKind, SourceMaterial
 def validate_document(document: DocumentDraft, materials: list[SourceMaterial]) -> None:
     """校验完整文档和实际来源；编辑阶段无需预先确认大纲。"""
     material_index(document, materials)
+    if not document.outline:
+        suggest_outline(materials)
 
 
 def semantic_capabilities(version: TemplateVersion) -> list[BlockKind]:

@@ -8,7 +8,12 @@ from fastapi import APIRouter, Depends, File, Header, Query, Response, UploadFil
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from docfidelity.contracts.documents import DocumentDraft, OutlineSection, SectionDraft
+from docfidelity.contracts.documents import (
+    MAX_DOCUMENT_SECTIONS,
+    DocumentDraft,
+    OutlineSection,
+    SectionDraft,
+)
 from docfidelity.contracts.generation import GenerationRun, RunEvent
 from docfidelity.contracts.materials import Identifier, SourceMaterial, Text
 
@@ -44,9 +49,9 @@ class DocumentPatch(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=512)
     mode: Literal["format_only", "organize"] | None = None
     instructions: str | None = Field(default=None, max_length=20_000)
-    outline: list[OutlineSection] | None = Field(default=None, max_length=500)
+    outline: list[OutlineSection] | None = Field(default=None, max_length=MAX_DOCUMENT_SECTIONS)
     outline_confirmed: bool | None = None
-    sections: list[SectionDraft] | None = Field(default=None, max_length=500)
+    sections: list[SectionDraft] | None = Field(default=None, max_length=MAX_DOCUMENT_SECTIONS)
     variables: dict[str, Text] | None = Field(default=None, max_length=100)
 
 

@@ -290,9 +290,10 @@ class DocumentRuns:
             current = self.documents.get(run.document_id)
             # 候选先写运行日志，恢复时可辨认已发布修订，避免再次采用。
             if not record.result_prepared:
-                candidate = self._candidate(
-                    candidate, revision=self.documents.records.next_revision(run.document_id)
-                )
+                if run.kind != "render":
+                    candidate = self._candidate(
+                        candidate, revision=self.documents.records.next_revision(run.document_id)
+                    )
                 run.result_document = candidate
                 record.result_prepared = True
                 self._save(record, "log", {"result_prepared": True})
@@ -315,7 +316,7 @@ class DocumentRuns:
                     self._save(record, "log", {"result_prepared": True})
                 self.documents.commit(candidate)
                 run.result_revision = candidate.revision
-            elif current == candidate:
+            elif run.kind != "render" and current == candidate:
                 run.result_revision = candidate.revision
             if artifact is not None:
                 record.artifacts = [artifact]
@@ -470,7 +471,7 @@ class DocumentRuns:
                 )
                 return self._finish(
                     run_id,
-                    document,
+                    self._candidate(document, pending=content.unresolved),
                     {
                         "artifact_id": artifact_id,
                         "name": "document.docx",

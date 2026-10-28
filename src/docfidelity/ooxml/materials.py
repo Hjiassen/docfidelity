@@ -207,12 +207,32 @@ def _extract(members: dict[str, bytes]) -> tuple[list[MaterialBlock], list[str],
             if not path.startswith("word/media/") or data is None:
                 pending.append(f"{locator}：图片资产缺失或位置不支持，待确认")
                 continue
-            if extension not in {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tif", ".tiff", ".webp"}:
+            if extension not in {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tif", ".tiff"}:
                 pending.append(f"{locator}：图片格式 {extension} 不支持，待确认")
+                continue
+            container = next(
+                (
+                    parent
+                    for parent in image.iterancestors()
+                    if parent.tag in {qn("wp:inline"), qn("wp:anchor")}
+                ),
+                None,
+            )
+            extent = container.find(qn("wp:extent")) if container is not None else None
+            try:
+                cx, cy = (
+                    (int(extent.get(key, "")) for key in ("cx", "cy"))
+                    if extent is not None
+                    else (0, 0)
+                )
+            except ValueError:
+                cx, cy = 0, 0
+            if cx <= 0 or cy <= 0:
+                pending.append(f"{locator}：图片 wp:extent 缺失或非法，未采用图片，待确认")
                 continue
             key = f"images/{hashlib.sha256(data).hexdigest()}{extension}"
             assets[key] = data
-            append("figure", locator, image_ref=key)
+            append("figure", locator, image_ref=key, image_extent={"cx": cx, "cy": cy})
 
     def read(node: Element, locator: str) -> None:
         for descendant in node.iter():
@@ -289,10 +309,15 @@ def _extract(members: dict[str, bytes]) -> tuple[list[MaterialBlock], list[str],
         if path.startswith(
             ("word/header", "word/footer", "word/footnotes", "word/endnotes")
         ) and path.endswith(".xml"):
-            text = _text(_xml(members[path]))
+            root = _xml(members[path])
+            text = _text(root)
             if text.strip():
                 pending.append(f"{path}：非正文内容作为文字保留，待确认")
                 append("para", path, text=text)
+            for node in root.iter():
+                if localname(node) in {"drawing", "object", "pict"}:
+                    locator = root.getroottree().getpath(node)
+                    pending.append(f"{path}:{locator}：非正文 {localname(node)} 对象未采用，待确认")
     return blocks, pending, assets
 
 

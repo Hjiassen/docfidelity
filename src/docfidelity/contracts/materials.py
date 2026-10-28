@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from pydantic import Field, StringConstraints, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 from typing_extensions import Self
 
 from .base import FormatModel
@@ -27,8 +27,16 @@ BlockKind = Literal["heading", "para", "bullets", "numbered", "table", "figure"]
 MAX_MATERIAL_CHARS = 2_000_000
 
 
-class MaterialBlock(FormatModel):
-    """新材料中的一个语义块；locator 定位原始输入。"""
+class ImageExtent(BaseModel):
+    """原件单次图片出现的可信显示尺寸，单位 EMU。"""
+
+    model_config = ConfigDict(extra="forbid")
+    cx: int = Field(gt=0, strict=True)
+    cy: int = Field(gt=0, strict=True)
+
+
+class SemanticMaterialBlock(FormatModel):
+    """供正文模型读取的材料语义，不含原件几何。"""
 
     block_id: Identifier
     kind: BlockKind
@@ -67,6 +75,19 @@ class MaterialBlock(FormatModel):
             raise ValueError("图片必须引用资产")
         if self.image_ref and any(part in {"", ".", ".."} for part in self.image_ref.split("/")):
             raise ValueError("资产引用必须为安全逻辑名")
+        return self
+
+
+class MaterialBlock(SemanticMaterialBlock):
+    """新材料语义与原件可信元数据；旧快照可省略图片尺寸。"""
+
+    image_extent: ImageExtent | None = None
+
+    @model_validator(mode="after")
+    def validate_extent(self) -> Self:
+        """仅图片允许持有可信显示尺寸。"""
+        if self.kind != "figure" and self.image_extent is not None:
+            raise ValueError("仅图片可以包含原件尺寸")
         return self
 
 
