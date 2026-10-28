@@ -47,3 +47,21 @@ contracts.materials导出别名Identifier(ASCII安全128)、SourceRef(material/b
 7. lint-imports:16 kept,0 broken；forbidden_words0；line_limit<=800；kernel_no_web OK。
 
 未跑全量/真实模型/HTTP/Word视觉，由Task4控制器负责。复杂对象只保留可提取文字并待确认，不宣称原布局/二进制语义保真。
+
+## Review fix round1
+
+两项Important已修复，无共享契约变更。
+
+1. _paragraph_kind 唯一调用点位于DOCX材料read；沿w:basedOn逐级查找outlineLvl、numId、ilvl，最近属性优先，numId=0明确取消继承编号；继承环或缺失基础样式终止并pending。真实python-docx夹具覆盖两层自定义标题/无序/编号样式、直接outlineLvl=9与numId=0覆盖，以及循环样式终止并保留文字。
+2. Markdown列表内遇table_open时保留每行单元格边界，作为单个带行分隔/列分隔的网格文字列表项，明确pending“列表内表格”；不再将每个单元格当成独立列表项。无需新增语义契约。
+
+RED命令：Python -X utf8 -m pytest tests/unit/test_materials_v2.py -m unit -k 'custom_styles or direct_properties or style_cycles or table_inside_list' →4 failed,14 deselected in0.88s。覆盖的4个测试名：
+- test_docx_custom_styles_inherit_heading_and_lists_through_multiple_bases
+- test_docx_direct_properties_override_inherited_outline_and_numbering
+- test_docx_style_cycles_terminate_and_keep_text
+- test_markdown_table_inside_list_preserves_grid_and_marks_pending
+
+GREEN命令：Python -X utf8 -m pytest tests/unit/test_materials_v2.py tests/unit/test_document_contracts_v2.py -m unit →26 passed in1.13s，无warnings。
+Ruff scoped：-m ruff check src/docfidelity/ooxml/materials.py src/docfidelity/ingest/materials.py tests/unit/test_materials_v2.py →All checks passed!
+Mypy scoped：-m mypy --strict src/docfidelity/ooxml/materials.py src/docfidelity/ingest/materials.py →Success:no issues found in2 source files。
+git diff --check →exit0。未跑全量及真实模型/HTTP/Word视觉；列表内表格保持文字网格+pending，未扩展为独立table块。

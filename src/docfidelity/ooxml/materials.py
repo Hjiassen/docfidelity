@@ -90,30 +90,48 @@ def _text(root: Element) -> str:
 
 
 def _paragraph_kind(
-    paragraph: Element, styles: dict[str, Element], numbering: Element | None
+    paragraph: Element,
+    styles: dict[str, Element],
+    numbering: Element | None,
+    pending: list[str],
+    locator: str,
 ) -> tuple[str, int | None]:
     properties = paragraph.find(qn("w:pPr"))
     style = attr(
         paragraph.find("w:pPr/w:pStyle", namespaces={"w": qn("w:p").split("}")[0][1:]}), "w:val"
     )
-    inherited = styles.get(style or "")
     outline = properties.find(qn("w:outlineLvl")) if properties is not None else None
     number = properties.find(qn("w:numPr")) if properties is not None else None
-    if inherited is not None:
+    number_id = attr(number.find(qn("w:numId")), "w:val") if number is not None else None
+    level = attr(number.find(qn("w:ilvl")), "w:val") if number is not None else None
+    seen: set[str] = set()
+    while style:
+        if style in seen:
+            pending.append(f"{locator}：段落样式继承循环，已使用最近可用属性，待确认")
+            break
+        seen.add(style)
+        inherited = styles.get(style)
+        if inherited is None:
+            pending.append(f"{locator}：段落基础样式缺失，待确认")
+            break
         inherited_properties = inherited.find(qn("w:pPr"))
         if inherited_properties is not None:
             if outline is None:
                 outline = inherited_properties.find(qn("w:outlineLvl"))
-            if number is None:
-                number = inherited_properties.find(qn("w:numPr"))
+            inherited_number = inherited_properties.find(qn("w:numPr"))
+            if inherited_number is not None:
+                if number_id is None:
+                    number_id = attr(inherited_number.find(qn("w:numId")), "w:val")
+                if level is None:
+                    level = attr(inherited_number.find(qn("w:ilvl")), "w:val")
+        style = attr(inherited.find(qn("w:basedOn")), "w:val")
     if outline is not None:
         value = int(attr(outline, "w:val") or "0")
         if 0 <= value <= 8:
             return "heading", value + 1
-    if number is not None:
+    if number_id not in {None, "0"}:
         kind = "numbered"
-        number_id = attr(number.find(qn("w:numId")), "w:val")
-        level = attr(number.find(qn("w:ilvl")), "w:val") or "0"
+        level = level or "0"
         if numbering is not None:
             for concrete in numbering.findall(qn("w:num")):
                 if attr(concrete, "w:numId") != number_id:
@@ -215,12 +233,15 @@ def _extract(members: dict[str, bytes]) -> tuple[list[MaterialBlock], list[str],
                 pending.append(
                     f"{locator}：{localname(descendant)} 对象需人工确认，文字已尽可能保留"
                 )
-            if descendant.tag == qn("w:drawing") and next(descendant.iter(qn("a:blip")), None) is None:
+            if (
+                descendant.tag == qn("w:drawing")
+                and next(descendant.iter(qn("a:blip")), None) is None
+            ):
                 pending.append(f"{locator}：drawing 复合图形不支持，待确认")
         if node.tag == qn("w:p"):
             text = _text(node)
             if text.strip():
-                kind, level = _paragraph_kind(node, styles, numbering)
+                kind, level = _paragraph_kind(node, styles, numbering, pending, locator)
                 if kind in {"bullets", "numbered"}:
                     append(kind, locator, items=[text])
                 else:

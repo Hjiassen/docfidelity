@@ -9,6 +9,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
 from docx import Document
+from docx.enum.style import WD_STYLE_TYPE
 from docx.oxml import OxmlElement
 
 from docfidelity.contracts.errors import EngineError
@@ -216,3 +217,68 @@ def test_docx_equation_text_is_preserved_and_marked_pending() -> None:
 def test_material_unicode_surrogates_raise_engine_error() -> None:
     with pytest.raises(EngineError):
         ingest_text(chr(0xD800), name="a.txt", material_id="m1")
+
+
+def test_docx_custom_styles_inherit_heading_and_lists_through_multiple_bases() -> None:
+    document = Document()
+    for name, parent in [
+        ("DerivedHeading", "Heading 1"),
+        ("DeepHeading", "DerivedHeading"),
+        ("DerivedBullet", "List Bullet"),
+        ("DeepBullet", "DerivedBullet"),
+        ("DerivedNumber", "List Number"),
+    ]:
+        style = document.styles.add_style(name, WD_STYLE_TYPE.PARAGRAPH)
+        style.base_style = document.styles[parent]
+    document.add_paragraph("继承标题", style="DeepHeading")
+    document.add_paragraph("继承无序项", style="DeepBullet")
+    document.add_paragraph("继承顺序项", style="DerivedNumber")
+    buffer = BytesIO()
+    document.save(buffer)
+    material, _ = ingest_material(buffer.getvalue(), name="a.docx", material_id="m1")
+    assert [(block.kind, block.level) for block in material.blocks] == [
+        ("heading", 1),
+        ("bullets", None),
+        ("numbered", None),
+    ]
+
+
+def test_docx_direct_properties_override_inherited_outline_and_numbering() -> None:
+    document = Document()
+    paragraph = document.add_paragraph("取消编号", style="List Bullet")
+    number = OxmlElement("w:numPr")
+    number_id = OxmlElement("w:numId")
+    number_id.set("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}val", "0")
+    number.append(number_id)
+    paragraph._p.get_or_add_pPr().append(number)
+    heading = document.add_paragraph("降为正文", style="Heading 1")
+    outline = OxmlElement("w:outlineLvl")
+    outline.set("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}val", "9")
+    heading._p.get_or_add_pPr().append(outline)
+    buffer = BytesIO()
+    document.save(buffer)
+    material, _ = ingest_material(buffer.getvalue(), name="a.docx", material_id="m1")
+    assert [block.kind for block in material.blocks] == ["para", "para"]
+
+
+def test_docx_style_cycles_terminate_and_keep_text() -> None:
+    document = Document()
+    first = document.styles.add_style("CycleA", WD_STYLE_TYPE.PARAGRAPH)
+    second = document.styles.add_style("CycleB", WD_STYLE_TYPE.PARAGRAPH)
+    first.base_style = second
+    second.base_style = first
+    document.add_paragraph("循环样式正文", style=first)
+    buffer = BytesIO()
+    document.save(buffer)
+    material, _ = ingest_material(buffer.getvalue(), name="a.docx", material_id="m1")
+    assert material.blocks[0].text == "循环样式正文"
+    assert any("循环" in pending for pending in material.pending)
+
+
+def test_markdown_table_inside_list_preserves_grid_and_marks_pending() -> None:
+    text = chr(10).join(
+        ["- 主项", "", "  | 列一 | 列二 |", "  | --- | --- |", "  | 值一 | 值二 |", "", "- 后项"]
+    )
+    material = ingest_text(text, name="a.md", material_id="m1", markdown=True)
+    assert material.blocks[0].items == ["主项", "列一 | 列二\n值一 | 值二", "后项"]
+    assert any("列表内表格" in pending for pending in material.pending)

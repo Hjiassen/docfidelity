@@ -103,6 +103,22 @@ def _markdown(text: str) -> tuple[list[MaterialBlock], list[str]]:
                     pending.append(f"{_location(current)}：嵌套列表按原顺序展开，待确认")
                 elif current.type in {"bullet_list_close", "ordered_list_close"}:
                     depth -= 1
+                elif current.type == "table_open":
+                    table_locator = _location(current)
+                    grid: list[str] = []
+                    grid_row: list[str] = []
+                    stop += 1
+                    while stop < len(tokens) and tokens[stop].type != "table_close":
+                        cell = tokens[stop]
+                        if cell.type == "tr_open":
+                            grid_row = []
+                        elif cell.type == "inline":
+                            grid_row.append(_inline(cell, pending, table_locator))
+                        elif cell.type == "tr_close":
+                            grid.append(" | ".join(grid_row))
+                        stop += 1
+                    items.append("\n".join(grid))
+                    pending.append(f"{table_locator}：列表内表格按文字网格保留，待确认")
                 elif current.type == "inline":
                     items.append(_inline(current, pending, _location(current)))
                 elif current.type in {"fence", "code_block", "html_block"}:
