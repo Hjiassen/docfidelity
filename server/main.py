@@ -40,6 +40,7 @@ from typing import Any, Final
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from docfidelity.contracts.generation import ContentGenerator
 from docfidelity.pipeline import EventLog, StageRegistry
 
 from .api import register
@@ -108,6 +109,7 @@ def create_app(
     decide_session: SessionFactory | None = None,
     now: Callable[[], datetime] | None = None,
     start_worker: bool | None = None,
+    content_generator: ContentGenerator | None = None,
 ) -> FastAPI:
     """构造应用。
 
@@ -136,8 +138,13 @@ def create_app(
         events=events,
         decide_session=decide_session,
         now=now,
+        content_generator=content_generator,
     )
-    worker = WorkerLoop(state.runner) if _should_start_worker(resolved, start_worker) else None
+    worker = (
+        WorkerLoop(state.runner, additional_runner=state.document_runs.run_once)
+        if _should_start_worker(resolved, start_worker)
+        else None
+    )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:

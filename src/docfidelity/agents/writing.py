@@ -14,9 +14,9 @@ from pydantic import Field
 from docfidelity.contracts.base import FormatModel
 from docfidelity.contracts.documents import OutlineSection, SectionDraft
 from docfidelity.contracts.errors import EngineError, ErrorCode
-from docfidelity.contracts.generation import WritingRequest, WritingResult
+from docfidelity.contracts.generation import CONTENT_PROMPT_VERSION, WritingRequest, WritingResult
 
-PROMPT_VERSION = "writing-v2-1"
+PROMPT_VERSION = CONTENT_PROMPT_VERSION
 
 
 class _OutlineOutput(FormatModel):

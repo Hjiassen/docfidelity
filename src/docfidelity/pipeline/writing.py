@@ -2,11 +2,17 @@
 
 from docfidelity.compose.assembly import assemble_content
 from docfidelity.compose.draft import generate_section
-from docfidelity.compose.outline import generate_outline, suggest_outline
+from docfidelity.compose.outline import generate_outline, material_index, suggest_outline
+from docfidelity.contracts.documents import DocumentDraft
 from docfidelity.contracts.errors import EngineError, ErrorCode
 from docfidelity.contracts.imports import StructureKind, TemplateVersion
 from docfidelity.contracts.ir import ContentIR
-from docfidelity.contracts.materials import BlockKind
+from docfidelity.contracts.materials import BlockKind, SourceMaterial
+
+
+def validate_document(document: DocumentDraft, materials: list[SourceMaterial]) -> None:
+    """校验完整文档和实际来源；编辑阶段无需预先确认大纲。"""
+    material_index(document, materials)
 
 
 def semantic_capabilities(version: TemplateVersion) -> list[BlockKind]:
@@ -55,6 +61,7 @@ def validate_render_capabilities(content: ContentIR, version: TemplateVersion) -
 
 __all__ = [
     "assemble_content",
+    "validate_document",
     "generate_outline",
     "generate_section",
     "semantic_capabilities",

@@ -10,12 +10,7 @@
    之间**可以。所以取消是"下一阶段不再开始"，而不是"当前阶段被掐断"——后者会留下一个
    写了一半的产物，比不取消更糟。
 
-为什么这里不直接调 ``run_document``
------------------------------------
-``run_document`` 是批量跑完的辅助入口（测试 / CLI 用），它把"逐个阶段"这件事封在里面，
-于是调用方拿不到**逐阶段事件**、也没有**阶段之间的取消点**。服务端两样都要。
-本模块因此自己循环、逐阶段调 ``run_stage``——而"断点复用 / 失败隔离"的判定仍然只有
-``run_stage`` 一处实现，循环只是循环。
+本模块逐阶段调用 ``run_stage``，保留逐阶段事件和取消点；断点判定复用内核。
 """
 
 from __future__ import annotations
@@ -115,8 +110,10 @@ class WorkerLoop:
         *,
         idle_seconds: float = 0.5,
         stop_timeout_seconds: float = 5.0,
+        additional_runner: Callable[[], object | None] | None = None,
     ) -> None:
         self._runner = runner
+        self._additional_runner = additional_runner
         self._idle = idle_seconds
         self._stop_timeout = stop_timeout_seconds
         self._stop = threading.Event()
@@ -143,7 +140,9 @@ class WorkerLoop:
     def tick(self) -> bool:
         """跑一轮；返回是否真的执行了一个作业（测试直接调它，避免碰线程）。"""
         try:
-            return self._runner.run_once() is not None
+            old = self._runner.run_once() is not None
+            new = self._additional_runner() is not None if self._additional_runner else False
+            return old or new
         except Exception:  # 调度线程绝不能因单次异常退出
             logging.getLogger(__name__).exception("worker tick 失败（已隔离，不影响后续作业）")
             return False

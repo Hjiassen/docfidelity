@@ -9,6 +9,7 @@ from fastapi import FastAPI
 
 from . import (
     decisions,
+    documents,
     domain_models,
     handlers,
     jobs,
@@ -31,6 +32,7 @@ ROUTERS = (
     uploads.router,
     templates.router,
     template_imports.router,
+    documents.router,
     domain_models.router,
     profiles.router,
     sources.router,

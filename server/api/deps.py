@@ -29,6 +29,7 @@ from typing import Final
 from fastapi import Request
 
 from docfidelity.contracts.config import RoutingConfig
+from docfidelity.contracts.generation import ContentGenerator
 from docfidelity.contracts.job import Job
 from docfidelity.pipeline import (
     BASELINE_FILENAME,
@@ -41,8 +42,11 @@ from docfidelity.pipeline import (
     model_session_factory,
 )
 
+from ..document_runs import DocumentRuns
+from ..documents import Documents
 from ..jobs import JobRunner, SessionFactory, WorkspaceEventLog
 from ..jobs.payload import load_payload
+from ..materials import Materials
 from ..services import Services
 from ..settings import ServerSettings
 from ..storage import Repository, build_repository
@@ -155,6 +159,9 @@ class AppState:
     runner: JobRunner
     services: Services
     template_imports: TemplateImports
+    materials: Materials
+    documents: Documents
+    document_runs: DocumentRuns
 
     @property
     def root(self) -> Path:
@@ -170,6 +177,7 @@ def build_state(
     events: EventLog | None = None,
     decide_session: SessionFactory | None = None,
     now: Callable[[], datetime] | None = None,
+    content_generator: ContentGenerator | None = None,
 ) -> AppState:
     """组装状态。所有参数可注入，故测试不必碰真实磁盘或真实时间。
 
@@ -212,12 +220,18 @@ def build_state(
         settings=resolved_settings,
         now=now or _utcnow,
     )
+    templates = TemplateImports(resolved_settings)
+    materials = Materials(resolved_settings)
+    documents = Documents(resolved_settings, materials, templates)
     return AppState(
         settings=resolved_settings,
         repository=resolved_repository,
         runner=runner,
         services=services,
-        template_imports=TemplateImports(resolved_settings),
+        template_imports=templates,
+        materials=materials,
+        documents=documents,
+        document_runs=DocumentRuns(documents, content_generator),
     )
 
 

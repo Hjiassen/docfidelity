@@ -97,13 +97,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         _LOGGER.warning("流水线阶段未注册，作业将无法推进：%s", sorted(missing))
 
     if args.once:
-        outcomes = state.runner.run_until_idle()
-        _LOGGER.info("一次性补跑完成：处理 %d 个作业", len(outcomes))
+        loop = WorkerLoop(state.runner, additional_runner=state.document_runs.run_once)
+        count = 0
+        while loop.tick():
+            count += 1
+        _LOGGER.info("一次性补跑完成：处理 %d 轮作业", count)
         return 0
 
     stop = threading.Event()
     install_signal_handlers(stop)
-    loop = WorkerLoop(state.runner, idle_seconds=args.idle_seconds)
+    loop = WorkerLoop(
+        state.runner, idle_seconds=args.idle_seconds, additional_runner=state.document_runs.run_once
+    )
     _LOGGER.info("worker 已就绪：storage_root=%s", state.root)
     try:
         while not stop.is_set():

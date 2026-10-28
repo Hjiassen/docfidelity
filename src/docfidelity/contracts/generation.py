@@ -13,6 +13,8 @@ from .documents import DocumentDraft, OutlineSection, SectionDraft
 from .errors import EngineErrorInfo
 from .materials import BlockKind, Digest, Identifier, Pending, SourceMaterial
 
+CONTENT_PROMPT_VERSION = "writing-v2-1"
+
 
 class WritingRequest(FormatModel):
     """请求体只包含当前材料和语义能力，不含模板原件或布局。"""
