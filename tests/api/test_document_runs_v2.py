@@ -415,3 +415,156 @@ def test_restart_finishes_prepared_revision_after_pointer_crash(tmp_path, monkey
         restarted.get(f'/api/v2/documents/{document["document_id"]}').json()["revision"]
         == result["result_revision"]
     )
+
+
+@pytest.mark.parametrize("partial", [False, True])
+def test_prompt_version_change_falls_back_and_preserves_checkpoints(tmp_path, monkeypatch, partial):
+    from server import document_runs
+
+    generator = Generator()
+    client, document, _ = enabled_document(tmp_path, generator)
+    document = confirmed(client, document)
+    path = f'/api/v2/documents/{document["document_id"]}'
+    refs = document["outline"][0]["source_refs"]
+    document = client.patch(
+        path,
+        json={
+            "outline": [
+                {"section_id": "first", "title": "甲", "source_refs": [refs[1]]},
+                {"section_id": "second", "title": "乙", "source_refs": [refs[1]]},
+            ],
+            "outline_confirmed": True,
+        },
+        headers={"If-Match": str(document["revision"])},
+    ).json()
+    run = submit(client, document, "content")
+    runner = client.app.state.docfidelity_state.document_runs
+    if partial:
+        original = runner._save
+
+        class Crash(BaseException):
+            pass
+
+        def crash_checkpoint(record, kind, payload):
+            original(record, kind, payload)
+            if payload.get("section_id") == "first":
+                raise Crash()
+
+        monkeypatch.setattr(runner, "_save", crash_checkpoint)
+        with pytest.raises(Crash):
+            runner.run_once()
+    before = len(generator.calls)
+    frozen = runner.get(run["run_id"])
+    monkeypatch.setattr(document_runs, "PROMPT_VERSION", "writing-v2-next")
+    restarted = client_at(tmp_path / "store", content_generator=generator)
+    restarted.app.state.docfidelity_state.settings.model_enabled = True
+    drain(restarted)
+    result = restarted.get(f'/api/v2/runs/{run["run_id"]}').json()
+    assert result["state"] == "succeeded"
+    assert len(generator.calls) == before
+    assert result["prompt_version"] == run["prompt_version"]
+    assert any("提示版本已变化" in p for p in result["result_document"]["pending"])
+    assert len(result["attempts"]) == int(partial)
+    if partial:
+        assert result["section_checkpoints"][0] == frozen.section_checkpoints[0].model_dump(
+            mode="json"
+        )
+        assert result["attempts"][0]["adopted"]
+
+
+@pytest.mark.parametrize("edited_first", [False, True])
+def test_generated_outline_reused_ids_with_new_sources_invalidates_old_body(tmp_path, edited_first):
+    class SwitchingGenerator(Generator):
+        swapped = False
+
+        def generate(self, request):
+            if request.task != "outline":
+                return super().generate(request)
+            self.calls.append(request)
+            groups = [request.materials[0].blocks[index : index + 2] for index in (0, 2, 4)]
+            if self.swapped:
+                groups[0], groups[1] = groups[1], groups[0]
+            return WritingResult(
+                outline=[
+                    OutlineSection(
+                        section_id=section_id,
+                        title=blocks[0].text,
+                        source_refs=[
+                            f"{request.materials[0].material_id}/{b.block_id}" for b in blocks
+                        ],
+                    )
+                    for section_id, blocks in zip(("first", "second", "third"), groups, strict=True)
+                ]
+            )
+
+    generator = SwitchingGenerator()
+    client, previous, _ = enabled_document(tmp_path, generator)
+    material = client.post(
+        "/api/v2/materials",
+        json={
+            "name": "three.md",
+            "text": "# 甲章\n甲事实。\n# 乙章\n乙事实。\n# 丙章\n丙事实。",
+            "markdown": True,
+        },
+    ).json()
+    document = client.post(
+        "/api/v2/documents",
+        json={
+            "name": "新文档",
+            "template_id": previous["template_id"],
+            "template_version": 1,
+            "material_ids": [material["material_id"]],
+            "mode": "organize",
+        },
+    ).json()
+    document = confirmed(client, document)
+    submit(client, document, "content")
+    drain(client)
+    path = f'/api/v2/documents/{document["document_id"]}'
+    document = client.get(path).json()
+    sections = document["sections"]
+    sections[2] = {
+        "section_id": "third",
+        "edited": True,
+        "blocks": [{"kind": "para", "text": "人工第三章"}],
+    }
+    if edited_first:
+        sections[0] = {
+            "section_id": "first",
+            "edited": True,
+            "blocks": [{"kind": "para", "text": "人工首章"}],
+        }
+    document = client.patch(
+        path, json={"sections": sections}, headers={"If-Match": str(document["revision"])}
+    ).json()
+    old_revision = document["revision"]
+    generator.swapped = True
+    submit(client, document, "outline")
+    drain(client)
+    changed = client.get(path).json()
+    assert [s["section_id"] for s in changed["sections"]] == ["third"]
+    assert changed["sections"][0]["blocks"][0]["text"] == "人工第三章"
+    assert any("大纲来源变化" in p for p in changed["pending"])
+    assert (
+        client.get(path + f"/revisions/{old_revision}").json()["sections"] == document["sections"]
+    )
+    changed = client.patch(
+        path, json={"outline_confirmed": True}, headers={"If-Match": str(changed["revision"])}
+    ).json()
+
+    class Failed:
+        def generate(self, request):
+            return WritingResult(error="unavailable")
+
+    client.app.state.docfidelity_state.document_runs.generator = Failed()
+    submit(client, changed, "content")
+    drain(client)
+    changed = client.get(path).json()
+    assert [s["blocks"][0]["text"] for s in changed["sections"]] == [
+        "乙事实。",
+        "甲事实。",
+        "人工第三章",
+    ]
+    render = submit(client, changed, "render")
+    drain(client)
+    assert client.get(f'/api/v2/runs/{render["run_id"]}').json()["state"] == "succeeded"

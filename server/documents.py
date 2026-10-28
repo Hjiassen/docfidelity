@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from docfidelity.contracts.documents import DocumentDraft
+from docfidelity.contracts.documents import DocumentDraft, OutlineSection, SectionDraft
 from docfidelity.contracts.errors import EngineError, ErrorCode
 from docfidelity.pipeline.writing import validate_document
 
@@ -15,6 +15,25 @@ from .ids import new_id
 from .materials import Materials
 from .settings import ServerSettings
 from .template_imports import TemplateImports, match_revision
+
+
+def sections_for_outline(
+    previous: DocumentDraft, outline: list[OutlineSection]
+) -> tuple[list[SectionDraft], list[str]]:
+    """来源不变才沿用正文；人工内容失效时仍可从不可变历史修订找回。"""
+    prior = {section.section_id: section.source_refs for section in previous.outline}
+    retained = {
+        section.section_id
+        for section in outline
+        if prior.get(section.section_id) == section.source_refs
+    }
+    sections = [section for section in previous.sections if section.section_id in retained]
+    pending = [
+        f"待确认：章节 {section.section_id} 因大纲来源变化或删除已移出当前正文，原内容保留在历史修订。"
+        for section in previous.sections
+        if section.section_id not in retained
+    ]
+    return sections, pending
 
 
 class Documents:
@@ -82,18 +101,14 @@ class Documents:
                 if "outline" in values and values["outline"] != [
                     s.model_dump() for s in previous.outline
                 ]:
-                    old = {s.section_id: s for s in previous.outline}
                     values.setdefault("outline_confirmed", False)
                     if "sections" not in values:
-                        retained = {
-                            item["section_id"]
-                            for item in values["outline"]
-                            if item["section_id"] in old
-                            and item["source_refs"] == old[item["section_id"]].source_refs
-                        }
-                        values["sections"] = [
-                            s.model_dump() for s in previous.sections if s.section_id in retained
-                        ]
+                        sections, pending = sections_for_outline(
+                            previous,
+                            [OutlineSection.model_validate(item) for item in values["outline"]],
+                        )
+                        values["sections"] = [section.model_dump() for section in sections]
+                        values["pending"] = list(dict.fromkeys([*previous.pending, *pending]))
                 document = DocumentDraft.model_validate(
                     previous.model_dump()
                     | values

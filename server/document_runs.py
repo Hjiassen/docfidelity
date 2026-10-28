@@ -32,7 +32,7 @@ from docfidelity.pipeline.writing import (
 from docfidelity.platform.fs import atomic_write_bytes
 
 from .document_store import Records, transaction_lock
-from .documents import Documents
+from .documents import Documents, sections_for_outline
 from .ids import new_id
 from .jobs.events import WorkspaceExecutionLocks
 
@@ -248,6 +248,7 @@ class DocumentRuns:
         if (
             not run.model_enabled
             or run.model_identity != self._identity()
+            or run.prompt_version != PROMPT_VERSION
             or run.document_snapshot.mode == "format_only"
         ):
             return None
@@ -357,18 +358,21 @@ class DocumentRuns:
             if run.model_identity != self._identity()
             else []
         )
+        if run.prompt_version != PROMPT_VERSION:
+            config_pending.append("待确认：提示版本已变化，本运行按规则回退。")
         if run.kind == "outline":
             result = generate_outline(document, run.materials_snapshot, provider)
+            sections, outline_pending = sections_for_outline(document, result.outline)
             candidate = self._candidate(
                 document,
                 outline=[s.model_dump() for s in result.outline],
                 outline_confirmed=False,
-                sections=[
-                    s.model_dump()
-                    for s in document.sections
-                    if s.section_id in {o.section_id for o in result.outline}
-                ],
-                pending=list(dict.fromkeys([*document.pending, *result.pending, *config_pending])),
+                sections=[section.model_dump() for section in sections],
+                pending=list(
+                    dict.fromkeys(
+                        [*document.pending, *result.pending, *config_pending, *outline_pending]
+                    )
+                ),
             )
             with transaction_lock(self.documents.lock_path):
                 record = self._read(run_id)
