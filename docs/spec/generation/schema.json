@@ -1,0 +1,1046 @@
+{
+  "$defs": {
+    "DocumentDraft": {
+      "additionalProperties": false,
+      "description": "冻结到具体材料和模板版本的文档修订。",
+      "properties": {
+        "document_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+          "title": "Document Id",
+          "type": "string"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "instructions": {
+          "default": "",
+          "maxLength": 20000,
+          "title": "Instructions",
+          "type": "string"
+        },
+        "material_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+            "type": "string"
+          },
+          "maxItems": 100,
+          "minItems": 1,
+          "title": "Material Ids",
+          "type": "array"
+        },
+        "mode": {
+          "enum": [
+            "format_only",
+            "organize"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "outline": {
+          "items": {
+            "$ref": "#/$defs/OutlineSection"
+          },
+          "maxItems": 500,
+          "title": "Outline",
+          "type": "array"
+        },
+        "outline_confirmed": {
+          "default": false,
+          "title": "Outline Confirmed",
+          "type": "boolean"
+        },
+        "pending": {
+          "items": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 2000,
+          "title": "Pending",
+          "type": "array"
+        },
+        "revision": {
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "sections": {
+          "items": {
+            "$ref": "#/$defs/SectionDraft"
+          },
+          "maxItems": 500,
+          "title": "Sections",
+          "type": "array"
+        },
+        "template_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+          "title": "Template Id",
+          "type": "string"
+        },
+        "template_version": {
+          "minimum": 1,
+          "title": "Template Version",
+          "type": "integer"
+        },
+        "variables": {
+          "additionalProperties": {
+            "maxLength": 100000,
+            "type": "string"
+          },
+          "maxProperties": 100,
+          "title": "Variables",
+          "type": "object"
+        }
+      },
+      "required": [
+        "document_id",
+        "revision",
+        "name",
+        "template_id",
+        "template_version",
+        "material_ids",
+        "mode"
+      ],
+      "title": "DocumentDraft",
+      "type": "object"
+    },
+    "DraftBlock": {
+      "additionalProperties": false,
+      "description": "不携带布局或 OOXML 的正文块。",
+      "properties": {
+        "columns": {
+          "items": {
+            "maxLength": 100000,
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Columns",
+          "type": "array"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "image_ref": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_./-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Image Ref"
+        },
+        "items": {
+          "items": {
+            "maxLength": 100000,
+            "type": "string"
+          },
+          "maxItems": 2000,
+          "title": "Items",
+          "type": "array"
+        },
+        "kind": {
+          "enum": [
+            "para",
+            "bullets",
+            "numbered",
+            "table",
+            "figure"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "rows": {
+          "items": {
+            "items": {
+              "maxLength": 100000,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "maxItems": 2000,
+          "title": "Rows",
+          "type": "array"
+        },
+        "source_refs": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}/[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+            "type": "string"
+          },
+          "maxItems": 2000,
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "text": {
+          "default": "",
+          "maxLength": 100000,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "DraftBlock",
+      "type": "object"
+    },
+    "EngineErrorInfo": {
+      "additionalProperties": false,
+      "description": "可持久化的错误快照。\n\n落库位置：``stages.error``。与 :class:`EngineError` 分离的原因是把**异常**\n（控制流）与**快照**（数据）分开——快照可以直接进 JSON 响应与数据库，\n异常对象不行。",
+      "properties": {
+        "code": {
+          "description": "错误码，取值见 ErrorCode",
+          "title": "Code",
+          "type": "string"
+        },
+        "fatal": {
+          "default": true,
+          "description": "False 表示可降级继续，不作为失败终态",
+          "title": "Fatal",
+          "type": "boolean"
+        },
+        "message": {
+          "description": "面向使用者的中文说明",
+          "title": "Message",
+          "type": "string"
+        },
+        "remediation": {
+          "description": "可执行动作清单",
+          "items": {
+            "type": "string"
+          },
+          "title": "Remediation",
+          "type": "array"
+        },
+        "where": {
+          "additionalProperties": true,
+          "description": "结构化定位信息",
+          "title": "Where",
+          "type": "object"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "EngineErrorInfo",
+      "type": "object"
+    },
+    "GenerationAttempt": {
+      "additionalProperties": false,
+      "description": "一次调用的安全审计；不持久化密钥、端点或响应正文。",
+      "properties": {
+        "adopted": {
+          "default": false,
+          "title": "Adopted",
+          "type": "boolean"
+        },
+        "attempt": {
+          "default": 1,
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Attempt",
+          "type": "integer"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        },
+        "fallback_used": {
+          "default": false,
+          "title": "Fallback Used",
+          "type": "boolean"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        },
+        "section_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Section Id"
+        },
+        "tokens_in": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Tokens In",
+          "type": "integer"
+        },
+        "tokens_out": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Tokens Out",
+          "type": "integer"
+        }
+      },
+      "title": "GenerationAttempt",
+      "type": "object"
+    },
+    "GenerationRun": {
+      "additionalProperties": false,
+      "description": "输入快照不变；晚到结果作为候选保存，不覆盖用户新修订。",
+      "properties": {
+        "artifact_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+            "type": "string"
+          },
+          "maxItems": 1000,
+          "title": "Artifact Ids",
+          "type": "array"
+        },
+        "attempts": {
+          "items": {
+            "$ref": "#/$defs/GenerationAttempt"
+          },
+          "maxItems": 5000,
+          "title": "Attempts",
+          "type": "array"
+        },
+        "created_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Created At"
+        },
+        "document_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+          "title": "Document Id",
+          "type": "string"
+        },
+        "document_revision": {
+          "minimum": 1,
+          "title": "Document Revision",
+          "type": "integer"
+        },
+        "document_snapshot": {
+          "$ref": "#/$defs/DocumentDraft"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EngineErrorInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "event_cursor": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Event Cursor",
+          "type": "integer"
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Finished At"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "input_digest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Input Digest",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "outline",
+            "content",
+            "render"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "materials_snapshot": {
+          "items": {
+            "$ref": "#/$defs/SourceMaterial"
+          },
+          "maxItems": 100,
+          "minItems": 1,
+          "title": "Materials Snapshot",
+          "type": "array"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        },
+        "model_enabled": {
+          "default": false,
+          "title": "Model Enabled",
+          "type": "boolean"
+        },
+        "model_identity": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model Identity"
+        },
+        "prompt_version": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Prompt Version",
+          "type": "string"
+        },
+        "result_document": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DocumentDraft"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "result_revision": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Result Revision"
+        },
+        "run_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+          "title": "Run Id",
+          "type": "string"
+        },
+        "section_checkpoints": {
+          "items": {
+            "$ref": "#/$defs/SectionDraft"
+          },
+          "maxItems": 500,
+          "title": "Section Checkpoints",
+          "type": "array"
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Started At"
+        },
+        "state": {
+          "default": "queued",
+          "enum": [
+            "queued",
+            "running",
+            "succeeded",
+            "failed",
+            "canceled"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "template_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+          "title": "Template Id",
+          "type": "string"
+        },
+        "template_version": {
+          "minimum": 1,
+          "title": "Template Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "run_id",
+        "document_id",
+        "kind",
+        "input_digest",
+        "document_revision",
+        "document_snapshot",
+        "materials_snapshot",
+        "template_id",
+        "template_version",
+        "prompt_version"
+      ],
+      "title": "GenerationRun",
+      "type": "object"
+    },
+    "MaterialBlock": {
+      "additionalProperties": false,
+      "description": "新材料中的一个语义块；locator 定位原始输入。",
+      "properties": {
+        "block_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+          "title": "Block Id",
+          "type": "string"
+        },
+        "columns": {
+          "items": {
+            "maxLength": 100000,
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Columns",
+          "type": "array"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "image_ref": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_./-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Image Ref"
+        },
+        "items": {
+          "items": {
+            "maxLength": 100000,
+            "type": "string"
+          },
+          "maxItems": 2000,
+          "title": "Items",
+          "type": "array"
+        },
+        "kind": {
+          "enum": [
+            "heading",
+            "para",
+            "bullets",
+            "numbered",
+            "table",
+            "figure"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "level": {
+          "anyOf": [
+            {
+              "maximum": 9,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Level"
+        },
+        "locator": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Locator",
+          "type": "string"
+        },
+        "rows": {
+          "items": {
+            "items": {
+              "maxLength": 100000,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "maxItems": 2000,
+          "title": "Rows",
+          "type": "array"
+        },
+        "text": {
+          "default": "",
+          "maxLength": 100000,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "block_id",
+        "kind",
+        "locator"
+      ],
+      "title": "MaterialBlock",
+      "type": "object"
+    },
+    "OutlineSection": {
+      "additionalProperties": false,
+      "description": "用户可确认、重排的大纲项。",
+      "properties": {
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "level": {
+          "default": 1,
+          "maximum": 9,
+          "minimum": 1,
+          "title": "Level",
+          "type": "integer"
+        },
+        "section_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+          "title": "Section Id",
+          "type": "string"
+        },
+        "source_refs": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}/[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+            "type": "string"
+          },
+          "maxItems": 2000,
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "title": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "section_id",
+        "title"
+      ],
+      "title": "OutlineSection",
+      "type": "object"
+    },
+    "RunEvent": {
+      "additionalProperties": false,
+      "description": "按运行单调递增、持久化后才发布的回放事件。",
+      "properties": {
+        "created_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Created At"
+        },
+        "event_id": {
+          "minimum": 1,
+          "title": "Event Id",
+          "type": "integer"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": true,
+          "maxProperties": 100,
+          "title": "Payload",
+          "type": "object"
+        },
+        "run_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+          "title": "Run Id",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "run",
+            "section",
+            "artifact",
+            "log"
+          ],
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "run_id",
+        "type"
+      ],
+      "title": "RunEvent",
+      "type": "object"
+    },
+    "SectionDraft": {
+      "additionalProperties": false,
+      "description": "无来源的人工作品必须显式声明 edited。",
+      "properties": {
+        "blocks": {
+          "items": {
+            "$ref": "#/$defs/DraftBlock"
+          },
+          "maxItems": 2000,
+          "title": "Blocks",
+          "type": "array"
+        },
+        "edited": {
+          "default": false,
+          "title": "Edited",
+          "type": "boolean"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "pending": {
+          "items": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 2000,
+          "title": "Pending",
+          "type": "array"
+        },
+        "section_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+          "title": "Section Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "section_id",
+        "blocks"
+      ],
+      "title": "SectionDraft",
+      "type": "object"
+    },
+    "SourceMaterial": {
+      "additionalProperties": false,
+      "description": "原始输入摘要与完整的有序材料块；不支持对象进入待确认。",
+      "properties": {
+        "blocks": {
+          "items": {
+            "$ref": "#/$defs/MaterialBlock"
+          },
+          "maxItems": 2000,
+          "minItems": 1,
+          "title": "Blocks",
+          "type": "array"
+        },
+        "digest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "material_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+          "title": "Material Id",
+          "type": "string"
+        },
+        "media_type": {
+          "enum": [
+            "text",
+            "markdown",
+            "docx"
+          ],
+          "title": "Media Type",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "pending": {
+          "items": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 2000,
+          "title": "Pending",
+          "type": "array"
+        }
+      },
+      "required": [
+        "material_id",
+        "name",
+        "media_type",
+        "digest",
+        "blocks"
+      ],
+      "title": "SourceMaterial",
+      "type": "object"
+    },
+    "WritingRequest": {
+      "additionalProperties": false,
+      "description": "请求体只包含当前材料和语义能力，不含模板原件或布局。",
+      "properties": {
+        "capabilities": {
+          "items": {
+            "enum": [
+              "heading",
+              "para",
+              "bullets",
+              "numbered",
+              "table",
+              "figure"
+            ],
+            "type": "string"
+          },
+          "maxItems": 6,
+          "title": "Capabilities",
+          "type": "array"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "instructions": {
+          "maxLength": 20000,
+          "title": "Instructions",
+          "type": "string"
+        },
+        "materials": {
+          "items": {
+            "$ref": "#/$defs/SourceMaterial"
+          },
+          "maxItems": 100,
+          "minItems": 1,
+          "title": "Materials",
+          "type": "array"
+        },
+        "name": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "outline": {
+          "items": {
+            "$ref": "#/$defs/OutlineSection"
+          },
+          "maxItems": 500,
+          "title": "Outline",
+          "type": "array"
+        },
+        "section_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Section Id"
+        },
+        "task": {
+          "enum": [
+            "outline",
+            "section"
+          ],
+          "title": "Task",
+          "type": "string"
+        }
+      },
+      "required": [
+        "task",
+        "name",
+        "instructions",
+        "materials"
+      ],
+      "title": "WritingRequest",
+      "type": "object"
+    },
+    "WritingResult": {
+      "additionalProperties": false,
+      "description": "生成候选；消费者必须检查来源与数字支持后才能采用。",
+      "properties": {
+        "error": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        },
+        "outline": {
+          "items": {
+            "$ref": "#/$defs/OutlineSection"
+          },
+          "maxItems": 500,
+          "title": "Outline",
+          "type": "array"
+        },
+        "pending": {
+          "items": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 2000,
+          "title": "Pending",
+          "type": "array"
+        },
+        "section": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SectionDraft"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "tokens_in": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Tokens In",
+          "type": "integer"
+        },
+        "tokens_out": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Tokens Out",
+          "type": "integer"
+        }
+      },
+      "title": "WritingResult",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "docfidelity contracts: generation",
+  "x-contract-family": "generation",
+  "x-contract-models": [
+    "GenerationAttempt",
+    "GenerationRun",
+    "RunEvent",
+    "WritingRequest",
+    "WritingResult"
+  ]
+}

@@ -14,7 +14,7 @@
 
 </div>
 
-V2 is being implemented according to the [redesign](docs/设计/产品重构方案.md). M0/M1 implement effective-template import, selection, cleanup, freezing, and rendering APIs; see the [API guide](docs/guide/effective-templates.md). The quick start and screenshots below show the running legacy workflow. New content generation and the browser workspace belong to M2 and M3; see the [roadmap](ROADMAP.md) and [acceptance notes](docs/验收/P0-验收自检.md).
+V2 now provides effective-template and content-writing APIs: select the Word formatting to retain, supply text, Markdown, or DOCX, confirm an outline, generate and edit chapters, then render a new Word document. See the [template guide](docs/guide/effective-templates.md) and [materials and writing guide](docs/guide/documents.md). The configured model has generated adopted outlines and chapters in real runs; disabled or failed models retain rule-based drafts. The quick start and screenshots below still show the legacy browser workflow. The new workspace belongs to M3; see the [roadmap](ROADMAP.md) and [acceptance notes](docs/验收/P0-验收自检.md).
 
 ## Quick Start
 
@@ -192,6 +192,7 @@ The README is available in Chinese and English. The application UI, bundled exam
 | Document | Contents |
 | --- | --- |
 | [User guide](docs/guide/README.md) | Builds, templates, profiles, models, and quality reports. |
+| [Materials and writing](docs/guide/documents.md) | M2 API workflow for materials, outlines, chapters, and recoverable runs (Chinese). |
 | [Example guide](examples/README.md) | Self-authored inputs, three profiles, and repeat builds. |
 | [Deployment guide](deploy/README.md) | Docker, source persistence, worker, and operations. |
 | [Requirements](docs/需求/需求.md) | Product scope, constraints, and acceptance criteria. |

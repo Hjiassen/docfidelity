@@ -886,6 +886,20 @@
         "title": "Body_import_template_api_v1_templates_imports_post",
         "type": "object"
       },
+      "Body_upload_material_api_v2_materials_upload_post": {
+        "properties": {
+          "file": {
+            "format": "binary",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_material_api_v2_materials_upload_post",
+        "type": "object"
+      },
       "BundledTemplateOut": {
         "description": "档案包里**随包带来并被登记**的一个模板包（验收 45 的回执的一行）。",
         "properties": {
@@ -2013,6 +2027,69 @@
         "title": "DocTypeProfile",
         "type": "object"
       },
+      "DocumentCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "instructions": {
+            "default": "",
+            "maxLength": 20000,
+            "title": "Instructions",
+            "type": "string"
+          },
+          "material_ids": {
+            "items": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Material Ids",
+            "type": "array"
+          },
+          "mode": {
+            "enum": [
+              "format_only",
+              "organize"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "template_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+            "title": "Template Id",
+            "type": "string"
+          },
+          "template_version": {
+            "minimum": 1.0,
+            "title": "Template Version",
+            "type": "integer"
+          },
+          "variables": {
+            "additionalProperties": {
+              "maxLength": 100000,
+              "type": "string"
+            },
+            "maxProperties": 100,
+            "title": "Variables",
+            "type": "object"
+          }
+        },
+        "required": [
+          "name",
+          "template_id",
+          "template_version",
+          "material_ids",
+          "mode"
+        ],
+        "title": "DocumentCreate",
+        "type": "object"
+      },
       "DocumentDiffOut": {
         "description": "两份产出的差异。\n\n``mode`` 用 ``DiffMode``（``qa.compare`` 的三个字面量）而不是 ``str``：界面的下拉框\n与\"服务端认的值\"因而只有一个来源。``equal`` 是服务端结论（\"两份一样吗\"），界面照抄；\n``truncated`` 说明差异条目触到了比对器的上限（``qa.compare.MAX_ITEMS``），\n界面据此提示\"只显示前 N 条\"。",
         "properties": {
@@ -2085,6 +2162,118 @@
         "title": "DocumentDiffOut",
         "type": "object"
       },
+      "DocumentDraft": {
+        "additionalProperties": false,
+        "description": "冻结到具体材料和模板版本的文档修订。",
+        "properties": {
+          "document_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "instructions": {
+            "default": "",
+            "maxLength": 20000,
+            "title": "Instructions",
+            "type": "string"
+          },
+          "material_ids": {
+            "items": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Material Ids",
+            "type": "array"
+          },
+          "mode": {
+            "enum": [
+              "format_only",
+              "organize"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "outline": {
+            "items": {
+              "$ref": "#/components/schemas/OutlineSection"
+            },
+            "maxItems": 500,
+            "title": "Outline",
+            "type": "array"
+          },
+          "outline_confirmed": {
+            "default": false,
+            "title": "Outline Confirmed",
+            "type": "boolean"
+          },
+          "pending": {
+            "items": {
+              "maxLength": 2000,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 2000,
+            "title": "Pending",
+            "type": "array"
+          },
+          "revision": {
+            "minimum": 1.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/SectionDraft"
+            },
+            "maxItems": 500,
+            "title": "Sections",
+            "type": "array"
+          },
+          "template_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+            "title": "Template Id",
+            "type": "string"
+          },
+          "template_version": {
+            "minimum": 1.0,
+            "title": "Template Version",
+            "type": "integer"
+          },
+          "variables": {
+            "additionalProperties": {
+              "maxLength": 100000,
+              "type": "string"
+            },
+            "maxProperties": 100,
+            "title": "Variables",
+            "type": "object"
+          }
+        },
+        "required": [
+          "document_id",
+          "revision",
+          "name",
+          "template_id",
+          "template_version",
+          "material_ids",
+          "mode"
+        ],
+        "title": "DocumentDraft",
+        "type": "object"
+      },
       "DocumentEntry": {
         "additionalProperties": false,
         "description": "项目内的一份待生成文档。",
@@ -2147,6 +2336,110 @@
           "template_ref"
         ],
         "title": "DocumentEntry",
+        "type": "object"
+      },
+      "DocumentPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "instructions": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "format_only",
+                  "organize"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "outline": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/OutlineSection"
+                },
+                "maxItems": 500,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outline"
+          },
+          "outline_confirmed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outline Confirmed"
+          },
+          "sections": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SectionDraft"
+                },
+                "maxItems": 500,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sections"
+          },
+          "variables": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "maxLength": 100000,
+                  "type": "string"
+                },
+                "maxProperties": 100,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variables"
+          }
+        },
+        "title": "DocumentPatch",
         "type": "object"
       },
       "DomainModel-Input": {
@@ -2422,6 +2715,92 @@
           "registered_at"
         ],
         "title": "DomainModelRegistrationOut",
+        "type": "object"
+      },
+      "DraftBlock": {
+        "additionalProperties": false,
+        "description": "不携带布局或 OOXML 的正文块。",
+        "properties": {
+          "columns": {
+            "items": {
+              "maxLength": 100000,
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Columns",
+            "type": "array"
+          },
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "image_ref": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_./-]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Ref"
+          },
+          "items": {
+            "items": {
+              "maxLength": 100000,
+              "type": "string"
+            },
+            "maxItems": 2000,
+            "title": "Items",
+            "type": "array"
+          },
+          "kind": {
+            "enum": [
+              "para",
+              "bullets",
+              "numbered",
+              "table",
+              "figure"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "items": {
+                "maxLength": 100000,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "maxItems": 2000,
+            "title": "Rows",
+            "type": "array"
+          },
+          "source_refs": {
+            "items": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}/[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+              "type": "string"
+            },
+            "maxItems": 2000,
+            "title": "Source Refs",
+            "type": "array"
+          },
+          "text": {
+            "default": "",
+            "maxLength": 100000,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "DraftBlock",
         "type": "object"
       },
       "DriftItemOut": {
@@ -3255,6 +3634,306 @@
         "title": "FrozenVariable",
         "type": "object"
       },
+      "GenerationAttempt": {
+        "additionalProperties": false,
+        "description": "一次调用的安全审计；不持久化密钥、端点或响应正文。",
+        "properties": {
+          "adopted": {
+            "default": false,
+            "title": "Adopted",
+            "type": "boolean"
+          },
+          "attempt": {
+            "default": 1,
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Attempt",
+            "type": "integer"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "fallback_used": {
+            "default": false,
+            "title": "Fallback Used",
+            "type": "boolean"
+          },
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "section_id": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Id"
+          },
+          "tokens_in": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Tokens In",
+            "type": "integer"
+          },
+          "tokens_out": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Tokens Out",
+            "type": "integer"
+          }
+        },
+        "title": "GenerationAttempt",
+        "type": "object"
+      },
+      "GenerationRun": {
+        "additionalProperties": false,
+        "description": "输入快照不变；晚到结果作为候选保存，不覆盖用户新修订。",
+        "properties": {
+          "artifact_ids": {
+            "items": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+              "type": "string"
+            },
+            "maxItems": 1000,
+            "title": "Artifact Ids",
+            "type": "array"
+          },
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/GenerationAttempt"
+            },
+            "maxItems": 5000,
+            "title": "Attempts",
+            "type": "array"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "document_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "document_revision": {
+            "minimum": 1.0,
+            "title": "Document Revision",
+            "type": "integer"
+          },
+          "document_snapshot": {
+            "$ref": "#/components/schemas/DocumentDraft"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EngineErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "event_cursor": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Event Cursor",
+            "type": "integer"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "input_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Input Digest",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "outline",
+              "content",
+              "render"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "materials_snapshot": {
+            "items": {
+              "$ref": "#/components/schemas/SourceMaterial"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Materials Snapshot",
+            "type": "array"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "model_enabled": {
+            "default": false,
+            "title": "Model Enabled",
+            "type": "boolean"
+          },
+          "model_identity": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Identity"
+          },
+          "prompt_version": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Prompt Version",
+            "type": "string"
+          },
+          "result_document": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocumentDraft"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "result_revision": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Revision"
+          },
+          "run_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "section_checkpoints": {
+            "items": {
+              "$ref": "#/components/schemas/SectionDraft"
+            },
+            "maxItems": 500,
+            "title": "Section Checkpoints",
+            "type": "array"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "state": {
+            "default": "queued",
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "failed",
+              "canceled"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "template_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+            "title": "Template Id",
+            "type": "string"
+          },
+          "template_version": {
+            "minimum": 1.0,
+            "title": "Template Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "run_id",
+          "document_id",
+          "kind",
+          "input_digest",
+          "document_revision",
+          "document_snapshot",
+          "materials_snapshot",
+          "template_id",
+          "template_version",
+          "prompt_version"
+        ],
+        "title": "GenerationRun",
+        "type": "object"
+      },
       "GenreSpec": {
         "additionalProperties": false,
         "description": "体例规格：章节骨架 + 允许的单元类型 + 约定。",
@@ -4030,6 +4709,138 @@
         "title": "Margins",
         "type": "object"
       },
+      "MaterialBlock": {
+        "additionalProperties": false,
+        "description": "新材料中的一个语义块；locator 定位原始输入。",
+        "properties": {
+          "block_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+            "title": "Block Id",
+            "type": "string"
+          },
+          "columns": {
+            "items": {
+              "maxLength": 100000,
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Columns",
+            "type": "array"
+          },
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "image_ref": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_./-]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Ref"
+          },
+          "items": {
+            "items": {
+              "maxLength": 100000,
+              "type": "string"
+            },
+            "maxItems": 2000,
+            "title": "Items",
+            "type": "array"
+          },
+          "kind": {
+            "enum": [
+              "heading",
+              "para",
+              "bullets",
+              "numbered",
+              "table",
+              "figure"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "maximum": 9.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          },
+          "locator": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Locator",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "items": {
+                "maxLength": 100000,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "maxItems": 2000,
+            "title": "Rows",
+            "type": "array"
+          },
+          "text": {
+            "default": "",
+            "maxLength": 100000,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "block_id",
+          "kind",
+          "locator"
+        ],
+        "title": "MaterialBlock",
+        "type": "object"
+      },
+      "MaterialRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "markdown": {
+            "default": false,
+            "title": "Markdown",
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 4000000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "text"
+        ],
+        "title": "MaterialRequest",
+        "type": "object"
+      },
       "ModelCall": {
         "additionalProperties": false,
         "description": "一次决策的模型调用汇总（Tracing，含全部重试）。\n\n失败时 ``ok=False`` 且 ``fallback_used=True``——这**不是**构建失败，\n只是决策降级（NFR-26 / 验收 39）。",
@@ -4430,6 +5241,50 @@
           "locator"
         ],
         "title": "OriginRef",
+        "type": "object"
+      },
+      "OutlineSection": {
+        "additionalProperties": false,
+        "description": "用户可确认、重排的大纲项。",
+        "properties": {
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "level": {
+            "default": 1,
+            "maximum": 9.0,
+            "minimum": 1.0,
+            "title": "Level",
+            "type": "integer"
+          },
+          "section_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+            "title": "Section Id",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}/[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+              "type": "string"
+            },
+            "maxItems": 2000,
+            "title": "Source Refs",
+            "type": "array"
+          },
+          "title": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "section_id",
+          "title"
+        ],
+        "title": "OutlineSection",
         "type": "object"
       },
       "OutlineSkeleton": {
@@ -6308,6 +7163,81 @@
         "title": "RuleSetRef",
         "type": "object"
       },
+      "RunEvent": {
+        "additionalProperties": false,
+        "description": "按运行单调递增、持久化后才发布的回放事件。",
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "event_id": {
+            "minimum": 1.0,
+            "title": "Event Id",
+            "type": "integer"
+          },
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "maxProperties": 100,
+            "title": "Payload",
+            "type": "object"
+          },
+          "run_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "run",
+              "section",
+              "artifact",
+              "log"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_id",
+          "run_id",
+          "type"
+        ],
+        "title": "RunEvent",
+        "type": "object"
+      },
+      "RunRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "section_id": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Id"
+          }
+        },
+        "title": "RunRequest",
+        "type": "object"
+      },
       "SectionChangeOut": {
         "properties": {
           "blocking": {
@@ -6341,6 +7271,51 @@
           "changed"
         ],
         "title": "SectionChangeOut",
+        "type": "object"
+      },
+      "SectionDraft": {
+        "additionalProperties": false,
+        "description": "无来源的人工作品必须显式声明 edited。",
+        "properties": {
+          "blocks": {
+            "items": {
+              "$ref": "#/components/schemas/DraftBlock"
+            },
+            "maxItems": 2000,
+            "title": "Blocks",
+            "type": "array"
+          },
+          "edited": {
+            "default": false,
+            "title": "Edited",
+            "type": "boolean"
+          },
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "pending": {
+            "items": {
+              "maxLength": 2000,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 2000,
+            "title": "Pending",
+            "type": "array"
+          },
+          "section_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+            "title": "Section Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "section_id",
+          "blocks"
+        ],
+        "title": "SectionDraft",
         "type": "object"
       },
       "SectionSpec": {
@@ -6787,6 +7762,70 @@
           }
         },
         "title": "SourceListResponse",
+        "type": "object"
+      },
+      "SourceMaterial": {
+        "additionalProperties": false,
+        "description": "原始输入摘要与完整的有序材料块；不支持对象进入待确认。",
+        "properties": {
+          "blocks": {
+            "items": {
+              "$ref": "#/components/schemas/MaterialBlock"
+            },
+            "maxItems": 2000,
+            "minItems": 1,
+            "title": "Blocks",
+            "type": "array"
+          },
+          "digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Digest",
+            "type": "string"
+          },
+          "format_version": {
+            "default": "1.0.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "material_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+            "title": "Material Id",
+            "type": "string"
+          },
+          "media_type": {
+            "enum": [
+              "text",
+              "markdown",
+              "docx"
+            ],
+            "title": "Media Type",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "pending": {
+            "items": {
+              "maxLength": 2000,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 2000,
+            "title": "Pending",
+            "type": "array"
+          }
+        },
+        "required": [
+          "material_id",
+          "name",
+          "media_type",
+          "digest",
+          "blocks"
+        ],
+        "title": "SourceMaterial",
         "type": "object"
       },
       "SourceOut": {
@@ -12190,6 +13229,843 @@
         "summary": "上传（仅收件）",
         "tags": [
           "uploads"
+        ]
+      }
+    },
+    "/api/v2/documents": {
+      "get": {
+        "operationId": "list_documents_api_v2_documents_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DocumentDraft"
+                  },
+                  "title": "Response List Documents Api V2 Documents Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Documents",
+        "tags": [
+          "documents"
+        ]
+      },
+      "post": {
+        "operationId": "create_document_api_v2_documents_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDraft"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Document",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/v2/documents/{document_id}": {
+      "get": {
+        "operationId": "get_document_api_v2_documents__document_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDraft"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Document",
+        "tags": [
+          "documents"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_document_api_v2_documents__document_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDraft"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Document",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/v2/documents/{document_id}/content-runs": {
+      "post": {
+        "operationId": "content_run_api_v2_documents__document_id__content_runs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerationRun"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Content Run",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/v2/documents/{document_id}/outline-runs": {
+      "post": {
+        "operationId": "outline_run_api_v2_documents__document_id__outline_runs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerationRun"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Outline Run",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/v2/documents/{document_id}/render-runs": {
+      "post": {
+        "operationId": "render_run_api_v2_documents__document_id__render_runs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerationRun"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Render Run",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/v2/documents/{document_id}/revisions/{revision}": {
+      "get": {
+        "operationId": "get_revision_api_v2_documents__document_id__revisions__revision__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "revision",
+            "required": true,
+            "schema": {
+              "title": "Revision",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDraft"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Revision",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/v2/materials": {
+      "post": {
+        "operationId": "create_material_api_v2_materials_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MaterialRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceMaterial"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Material",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/v2/materials/upload": {
+      "post": {
+        "operationId": "upload_material_api_v2_materials_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_material_api_v2_materials_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceMaterial"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upload Material",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/v2/materials/{material_id}": {
+      "get": {
+        "operationId": "get_material_api_v2_materials__material_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "material_id",
+            "required": true,
+            "schema": {
+              "title": "Material Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceMaterial"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Material",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/v2/runs/{run_id}": {
+      "get": {
+        "operationId": "get_run_api_v2_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerationRun"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Run",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/v2/runs/{run_id}/artifacts": {
+      "get": {
+        "operationId": "get_artifacts_api_v2_runs__run_id__artifacts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Get Artifacts Api V2 Runs  Run Id  Artifacts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Artifacts",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/v2/runs/{run_id}/artifacts/{artifact_id}": {
+      "get": {
+        "operationId": "download_artifact_api_v2_runs__run_id__artifacts__artifact_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "artifact_id",
+            "required": true,
+            "schema": {
+              "title": "Artifact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Download Artifact",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/v2/runs/{run_id}/cancel": {
+      "post": {
+        "operationId": "cancel_run_api_v2_runs__run_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerationRun"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Run",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/v2/runs/{run_id}/events": {
+      "get": {
+        "operationId": "get_events_api_v2_runs__run_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Cursor",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RunEvent"
+                  },
+                  "title": "Response Get Events Api V2 Runs  Run Id  Events Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Events",
+        "tags": [
+          "documents"
         ]
       }
     },

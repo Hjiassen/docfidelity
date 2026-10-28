@@ -18,3 +18,20 @@ def test_effective_template_schema_is_exported() -> None:
     assert "TemplateSelection" in definitions
     assert "FormatBindings" in definitions
     assert "source_sha256" in definitions["ImportDraft"]["properties"]
+
+
+@pytest.mark.parametrize(
+    ("family", "models"),
+    [
+        ("materials", ["SourceMaterial", "MaterialBlock"]),
+        ("documents", ["DocumentDraft", "OutlineSection", "SectionDraft"]),
+        ("generation", ["GenerationRun", "WritingRequest", "WritingResult", "RunEvent"]),
+    ],
+)
+def test_writing_contract_schemas_are_exported(family: str, models: list[str]) -> None:
+    output = generate()
+    name = f"docs/spec/{family}/schema.json"
+    assert name in output
+    definitions = json.loads(output[name])["$defs"]
+    for model in models:
+        assert model in definitions

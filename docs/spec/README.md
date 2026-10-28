@@ -14,6 +14,9 @@
 | `qa/` | 门禁规则、判定、豁免、报告 | Evolving |
 | `config/` | 项目配置 | Stable |
 | `effective-template/` | V2 导入、保留项选择、冻结有效模板与 FormatBindings | Beta |
+| `materials/` | V2 文本、Markdown、DOCX 新材料块与来源定位 | Beta |
+| `documents/` | V2 可编辑大纲、章节正文、明确模板版本与文档修订 | Beta |
+| `generation/` | V2 独立撰写协议、冻结运行输入、调用与采用审计、事件 | Beta |
 
 V2 使用独立有效模板规范，旧 `template/` 与 `profile/` 在 M5 删除前继续用于兼容链路回归。V2 ContentIR 可省略旧 `profile_id`，格式全部由冻结绑定决定。
 

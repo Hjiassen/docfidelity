@@ -47,6 +47,9 @@ FAMILY_MODULES: dict[str, str] = {
     "qa": "docfidelity.contracts.qa",
     "config": "docfidelity.contracts.config",
     "effective-template": "docfidelity.contracts.imports",
+    "materials": "docfidelity.contracts.materials",
+    "documents": "docfidelity.contracts.documents",
+    "generation": "docfidelity.contracts.generation",
 }
 
 

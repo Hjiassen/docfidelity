@@ -14,7 +14,7 @@
 
 </div>
 
-V2 正在按[重构方案](docs/设计/产品重构方案.md)实施：M0/M1 已实现有效模板导入、选择、清理、冻结与渲染 API，试用见[有效模板指南](docs/guide/effective-templates.md)。下方快速开始和截图对应可运行的旧链路；新版模型撰写与浏览器工作台分别在 M2、M3，状态见[路线图](ROADMAP.md)及[验收](docs/验收/P0-验收自检.md)。
+V2 的有效模板与新材料撰写 API 已实现：导入并选择格式，提供文本、Markdown 或 DOCX，确认大纲、逐章生成与编辑，再生成全新 Word。见[有效模板指南](docs/guide/effective-templates.md)和[新材料与撰写指南](docs/guide/documents.md)。当前配置模型已真实生成并采用大纲和正文，关闭或失败可回退规则草稿。下方快速开始和截图仍对应旧浏览器链路；新版工作台属于 M3，状态见[路线图](ROADMAP.md)及[验收](docs/验收/P0-验收自检.md)。
 
 ## 快速开始
 
@@ -190,6 +190,7 @@ Compose 使用同一镜像运行 API 和独立 worker，数据存于命名卷 `d
 | 文档 | 说明 |
 | --- | --- |
 | [使用指南](docs/guide/README.md) | 构建、模板、档案、模型与质量报告。 |
+| [新材料与撰写](docs/guide/documents.md) | M2 API 的材料、大纲、章节与可恢复运行流程。 |
 | [示例说明](examples/README.md) | 自制输入、三类档案和重复构建。 |
 | [部署指南](deploy/README.md) | Docker、源码持久化、worker 与运维。 |
 | [需求](docs/需求/需求.md) | 产品范围、硬约束和验收标准。 |

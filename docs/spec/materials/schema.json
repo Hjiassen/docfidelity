@@ -1,0 +1,181 @@
+{
+  "$defs": {
+    "MaterialBlock": {
+      "additionalProperties": false,
+      "description": "新材料中的一个语义块；locator 定位原始输入。",
+      "properties": {
+        "block_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+          "title": "Block Id",
+          "type": "string"
+        },
+        "columns": {
+          "items": {
+            "maxLength": 100000,
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Columns",
+          "type": "array"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "image_ref": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_./-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Image Ref"
+        },
+        "items": {
+          "items": {
+            "maxLength": 100000,
+            "type": "string"
+          },
+          "maxItems": 2000,
+          "title": "Items",
+          "type": "array"
+        },
+        "kind": {
+          "enum": [
+            "heading",
+            "para",
+            "bullets",
+            "numbered",
+            "table",
+            "figure"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "level": {
+          "anyOf": [
+            {
+              "maximum": 9,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Level"
+        },
+        "locator": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Locator",
+          "type": "string"
+        },
+        "rows": {
+          "items": {
+            "items": {
+              "maxLength": 100000,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "maxItems": 2000,
+          "title": "Rows",
+          "type": "array"
+        },
+        "text": {
+          "default": "",
+          "maxLength": 100000,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "block_id",
+        "kind",
+        "locator"
+      ],
+      "title": "MaterialBlock",
+      "type": "object"
+    },
+    "SourceMaterial": {
+      "additionalProperties": false,
+      "description": "原始输入摘要与完整的有序材料块；不支持对象进入待确认。",
+      "properties": {
+        "blocks": {
+          "items": {
+            "$ref": "#/$defs/MaterialBlock"
+          },
+          "maxItems": 2000,
+          "minItems": 1,
+          "title": "Blocks",
+          "type": "array"
+        },
+        "digest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "material_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+          "title": "Material Id",
+          "type": "string"
+        },
+        "media_type": {
+          "enum": [
+            "text",
+            "markdown",
+            "docx"
+          ],
+          "title": "Media Type",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "pending": {
+          "items": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 2000,
+          "title": "Pending",
+          "type": "array"
+        }
+      },
+      "required": [
+        "material_id",
+        "name",
+        "media_type",
+        "digest",
+        "blocks"
+      ],
+      "title": "SourceMaterial",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "docfidelity contracts: materials",
+  "x-contract-family": "materials",
+  "x-contract-models": [
+    "MaterialBlock",
+    "SourceMaterial"
+  ]
+}

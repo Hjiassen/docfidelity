@@ -1,0 +1,301 @@
+{
+  "$defs": {
+    "DocumentDraft": {
+      "additionalProperties": false,
+      "description": "冻结到具体材料和模板版本的文档修订。",
+      "properties": {
+        "document_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+          "title": "Document Id",
+          "type": "string"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "instructions": {
+          "default": "",
+          "maxLength": 20000,
+          "title": "Instructions",
+          "type": "string"
+        },
+        "material_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+            "type": "string"
+          },
+          "maxItems": 100,
+          "minItems": 1,
+          "title": "Material Ids",
+          "type": "array"
+        },
+        "mode": {
+          "enum": [
+            "format_only",
+            "organize"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "outline": {
+          "items": {
+            "$ref": "#/$defs/OutlineSection"
+          },
+          "maxItems": 500,
+          "title": "Outline",
+          "type": "array"
+        },
+        "outline_confirmed": {
+          "default": false,
+          "title": "Outline Confirmed",
+          "type": "boolean"
+        },
+        "pending": {
+          "items": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 2000,
+          "title": "Pending",
+          "type": "array"
+        },
+        "revision": {
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "sections": {
+          "items": {
+            "$ref": "#/$defs/SectionDraft"
+          },
+          "maxItems": 500,
+          "title": "Sections",
+          "type": "array"
+        },
+        "template_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+          "title": "Template Id",
+          "type": "string"
+        },
+        "template_version": {
+          "minimum": 1,
+          "title": "Template Version",
+          "type": "integer"
+        },
+        "variables": {
+          "additionalProperties": {
+            "maxLength": 100000,
+            "type": "string"
+          },
+          "maxProperties": 100,
+          "title": "Variables",
+          "type": "object"
+        }
+      },
+      "required": [
+        "document_id",
+        "revision",
+        "name",
+        "template_id",
+        "template_version",
+        "material_ids",
+        "mode"
+      ],
+      "title": "DocumentDraft",
+      "type": "object"
+    },
+    "DraftBlock": {
+      "additionalProperties": false,
+      "description": "不携带布局或 OOXML 的正文块。",
+      "properties": {
+        "columns": {
+          "items": {
+            "maxLength": 100000,
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Columns",
+          "type": "array"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "image_ref": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_./-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Image Ref"
+        },
+        "items": {
+          "items": {
+            "maxLength": 100000,
+            "type": "string"
+          },
+          "maxItems": 2000,
+          "title": "Items",
+          "type": "array"
+        },
+        "kind": {
+          "enum": [
+            "para",
+            "bullets",
+            "numbered",
+            "table",
+            "figure"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "rows": {
+          "items": {
+            "items": {
+              "maxLength": 100000,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "maxItems": 2000,
+          "title": "Rows",
+          "type": "array"
+        },
+        "source_refs": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}/[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+            "type": "string"
+          },
+          "maxItems": 2000,
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "text": {
+          "default": "",
+          "maxLength": 100000,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "DraftBlock",
+      "type": "object"
+    },
+    "OutlineSection": {
+      "additionalProperties": false,
+      "description": "用户可确认、重排的大纲项。",
+      "properties": {
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "level": {
+          "default": 1,
+          "maximum": 9,
+          "minimum": 1,
+          "title": "Level",
+          "type": "integer"
+        },
+        "section_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+          "title": "Section Id",
+          "type": "string"
+        },
+        "source_refs": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}/[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+            "type": "string"
+          },
+          "maxItems": 2000,
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "title": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "section_id",
+        "title"
+      ],
+      "title": "OutlineSection",
+      "type": "object"
+    },
+    "SectionDraft": {
+      "additionalProperties": false,
+      "description": "无来源的人工作品必须显式声明 edited。",
+      "properties": {
+        "blocks": {
+          "items": {
+            "$ref": "#/$defs/DraftBlock"
+          },
+          "maxItems": 2000,
+          "title": "Blocks",
+          "type": "array"
+        },
+        "edited": {
+          "default": false,
+          "title": "Edited",
+          "type": "boolean"
+        },
+        "format_version": {
+          "default": "1.0.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "pending": {
+          "items": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 2000,
+          "title": "Pending",
+          "type": "array"
+        },
+        "section_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+          "title": "Section Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "section_id",
+        "blocks"
+      ],
+      "title": "SectionDraft",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "docfidelity contracts: documents",
+  "x-contract-family": "documents",
+  "x-contract-models": [
+    "DocumentDraft",
+    "DraftBlock",
+    "OutlineSection",
+    "SectionDraft"
+  ]
+}
